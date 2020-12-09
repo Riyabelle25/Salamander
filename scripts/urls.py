@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
-
+from . import views
 urlpatterns = [
-    #path('', register_p, name='home'),
+    path('scrapper',views.scrapper , name='Scrapping Followers'),
 ]

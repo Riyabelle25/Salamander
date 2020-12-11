@@ -5,7 +5,7 @@ from django.conf import settings
 from scripts import views
 
 urlpatterns = [
-    path('', views.calculate_recommendations, name='home'),
+    path('', views.Results_toFirestore, name='home'),
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

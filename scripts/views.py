@@ -82,7 +82,7 @@ def calculate_recommendations(request):
 
 def scrapper(request):
     count = 100  # number of profiles you want to scrap
-    #User
+    # User
     account = "salamandar_nemesis"  # account from
     page = "following"  # from following or followers
 
@@ -132,7 +132,7 @@ def scrapper(request):
     x = datetime.datetime.now()
     print(x)
     # attack's 50 peeps
-    for i in range(1, 50):
+    for i in range(1, 20):
         try:
             scr1 = driver.find_element_by_xpath(
                 '/html/body/div[5]/div/div/div[2]/ul/div/li[%s]' % i)
@@ -192,7 +192,7 @@ def scrapper(request):
         x = datetime.datetime.now()
         print(x)
         # 40 people of all 7 peeps
-        for i in range(1, 40):
+        for i in range(1, 20):
             try:
                 scr1 = driver.find_element_by_xpath(
                     '/html/body/div[5]/div/div/div[2]/ul/div/li[%s]' % i)
@@ -217,7 +217,6 @@ def scrapper(request):
         try:
             link = "https://www.instagram.com/"+(x.split('\n')[0])+"/?__a=1"
             print(link)
-            sleep(0.2)
             req = Request(
                 link,
                 data=None,
@@ -234,8 +233,35 @@ def scrapper(request):
     f.close()
     flock.close()
     f = open("abc", 'r')
+    fhash = open("hash", 'w')
     for x in f:
-        res = json.loads(x)
-        print(str(res["graphql"]["user"]["is_private"]))
+        while x.find("#") != -1:
+            x = x[(x.find("#")+1):]
+            data = ""
+            i = 0
+            while x[i].isalpha():
+                data += x[i]
+                i = i+1
+            if data != "":
+                fhash.write(data)
+                fhash.write("\n")
+    fhash.close()
+    fhash = open("hash", 'r')
+    dataG = []
+    for x in fhash:
+        dataG.append(x.split('\n')[0])
+    final = {}
+    final["recommendation"] = dataG
+    col_ref = store.collection('users')
+    try:
+        docs = col_ref.get()
+        for doc in docs:
+            tmp = 'users/' + str(doc.id) + '/following/' + \
+                attack+'/followedHashtags'
+            store.collection(tmp).document(attack).set(final)
+            print("DONE!")
+    except google.cloud.exceptions.NotFound:
+        print(u'Missing data')
     f.close()
+    fhash.close()
     return HttpResponse("st")

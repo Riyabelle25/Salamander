@@ -7,12 +7,24 @@ import pandas as pd
 import numpy as np
 from scipy.sparse import csr_matrix
 
+#for item in items:
+ #   title = item.title.string.lower()
+
+   # input()
 from firebase_admin import credentials, firestore
 # Create your views here.
 def current_datetime(request):
+    api = finding(appid= 'JamesCan-HiMilesp-PRD-c246ab013-815fa751', config_file=None)
+    api_request = { 'keywords': 'White Piano'}
+    response = api.execute('findItemsByKeywords', api_request)
+    soup = BeautifulSoup(response.content,'lxml')
+
+    totalentries = int(soup.find('totalentries').text)
+    items = soup.find_all('item')
+
     now = datetime.datetime.now()
     html = "<html><body>Hey,It is now %s.</body></html>" % now
-    return HttpResponse(html)
+    return HttpResponse(items[0])
 
 
 creds = credentials.Certificate("scripts/serviceKey.json")

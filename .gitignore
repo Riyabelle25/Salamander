@@ -149,3 +149,6 @@ cython_debug/
 
 # firebase keys
 scripts/serviceKey.json
+
+#json file
+scripts/search_results_output.jsonl

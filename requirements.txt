@@ -60,3 +60,7 @@ urllib3==1.25.9
 webdriver-manager==3.2.2
 whitenoise==5.2.0
 wrapt==1.12.1
+beautifulsoup4==4.9.3
+ebaysdk==2.2.0
+selectorlib==0.16.0
+Unidecode==1.1.1

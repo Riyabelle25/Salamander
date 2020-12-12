@@ -55,15 +55,6 @@ def scrape(url):
 
 # Create your dummy views here.
 def current_datetime(request):
-    # api = finding(appid= 'JamesCan-HiMilesp-PRD-c246ab013-815fa751', config_file=None)
-    # api_request = { 'keywords': 'White Piano'}
-    # response = api.execute('findItemsByKeywords', api_request)
-    # soup = BeautifulSoup(response.content,'lxml')
-
-    # totalentries = int(soup.find('totalentries').text)
-    # items = soup.find_all('item')
-    
-
     now = datetime.datetime.now()
     html = "<html><body>Hey,It is now %s.</body></html>" % now
     return HttpResponse(html)
@@ -125,29 +116,27 @@ Returns:
     data : dictionary of {follower_id -> hashtagList} 
 '''
 def getCollectionData(userid):
-#    col_ref = store.collection("users/"+userid+"/following")
-    doc_ref = store.collection("users/XCeTunwzepf5rcvnLRS7/following/prakhar__gupta__/followedHashtags").document("prakhar__gupta__")
-    doc= doc_ref.get()
-    print(131)
+    col_ref = store.collection("users/"+userid+"/following")
+    data = {}
+    # doc_ref = store.collection("users/XCeTunwzepf5rcvnLRS7/following/prakhar__gupta__/followedHashtags").document("prakhar__gupta__")
+    # doc= doc_ref.get()
+    # print(131)
 
-    # try:
-    #     print("131")
-    #     #/users/XCeTunwzepf5rcvnLRS7/following/prakhar__gupta__/followedHashtags
-    #     followers = col_ref.get()
-    #     for follower in followers:
-    #         print(follower.id)
-    #         tmp = "users/" + userid + "/following/"+follower.id+"/followedHashtags"
-    #         print(tmp)  
-    #         hashtags = store.collection(tmp).get()    
-    #         for hashtag in hashtags: 
-    #             print("137")
-    #             tmpdict = hashtag.to_dict()   
-    #             print(hashtag.to_dict())                        
-    #             data[follower.id] = tmpdict['recommendation']
-    # except google.cloud.exceptions.NotFound:
-    #     print('Missing data')
-    
-    data=doc.to_dict()
+    try:
+        print("131")
+        #/users/XCeTunwzepf5rcvnLRS7/following/prakhar__gupta__/followedHashtags
+        followers = col_ref.get()
+        for follower in followers:
+            print(follower.id)
+            tmp = "users/" + userid + "/following/"+follower.id+"/followedHashtags"
+            print(tmp)  
+            hashtags = store.collection(tmp).get()    
+            for hashtag in hashtags: 
+                print("137")
+                print(hashtag.id)                     
+                data[follower.id] = hashtag.to_dict()['recommendation']
+    except google.cloud.exceptions.NotFound:
+        print('Missing data')
 
     return data
 
@@ -182,7 +171,7 @@ def finalData():
 
         hashtags=fingerprint.main(listToString(data[key]))
         print(len(hashtags))
-        for hashtag in hashtags[:40]:
+        for hashtag in hashtags[:10]:
             print(hashtag)
 
             if hashtag not in tmp2:

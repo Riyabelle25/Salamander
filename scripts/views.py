@@ -311,8 +311,7 @@ def scrapper(request):
                 try:
                     docs = col_ref.get()
                     for doc in docs:
-                        tmp = 'users/' + str(tr) + '/following/' + \
-                            tr+'/followedHashtags'
+                        tmp = 'users/' + str(tr) + '/following'
                         store.collection(tmp).document(username).set(final)
                 except google.cloud.exceptions.NotFound:
                     print(u'Missing data')

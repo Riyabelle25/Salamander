@@ -6,31 +6,68 @@ import google.cloud
 import pandas as pd
 import numpy as np
 from scipy.sparse import csr_matrix
+from ebaysdk.finding import Connection as finding
+from bs4 import BeautifulSoup
 
-#for item in items:
- #   title = item.title.string.lower()
-
-   # input()
+from selectorlib import Extractor
+import requests 
+import json 
+from time import sleep
+from scripts import fingerprint
 from firebase_admin import credentials, firestore
-# Create your views here.
-def current_datetime(request):
-    api = finding(appid= 'JamesCan-HiMilesp-PRD-c246ab013-815fa751', config_file=None)
-    api_request = { 'keywords': 'White Piano'}
-    response = api.execute('findItemsByKeywords', api_request)
-    soup = BeautifulSoup(response.content,'lxml')
-
-    totalentries = int(soup.find('totalentries').text)
-    items = soup.find_all('item')
-
-    now = datetime.datetime.now()
-    html = "<html><body>Hey,It is now %s.</body></html>" % now
-    return HttpResponse(items[0])
-
 
 creds = credentials.Certificate("scripts/serviceKey.json")
 myapp = firebase_admin.initialize_app(creds)
 
 store = firestore.client()
+
+
+def scrape(url):  
+    # Create an Extractor by reading from the YAML file
+    e = Extractor.from_yaml_file('scripts/search_results.yml')
+
+    headers = {
+        'dnt': '1',
+        'upgrade-insecure-requests': '1',
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Safari/537.36',
+        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+        'sec-fetch-site': 'same-origin',
+        'sec-fetch-mode': 'navigate',
+        'sec-fetch-user': '?1',
+        'sec-fetch-dest': 'document',
+        'referer': 'https://www.amazon.in/',
+        'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
+    }
+
+    # Download the page using requests
+    print("Downloading %s"%url)
+    r = requests.get(url, headers=headers)
+    # Simple check to check if page was blocked (Usually 503)
+    if r.status_code > 500:
+        if "To discuss automated access to Amazon data please contact" in r.text:
+            print("Page %s was blocked by Amazon. Please try using better proxies\n"%url)
+        else:
+            print("Page %s must have been blocked by Amazon as the status code was %d"%(url,r.status_code))
+        print(r.status_code)
+        return None
+    # Pass the HTML of the page and create 
+    return e.extract(r.text), r.text
+
+# Create your dummy views here.
+def current_datetime(request):
+    # api = finding(appid= 'JamesCan-HiMilesp-PRD-c246ab013-815fa751', config_file=None)
+    # api_request = { 'keywords': 'White Piano'}
+    # response = api.execute('findItemsByKeywords', api_request)
+    # soup = BeautifulSoup(response.content,'lxml')
+
+    # totalentries = int(soup.find('totalentries').text)
+    # items = soup.find_all('item')
+    
+
+    now = datetime.datetime.now()
+    html = "<html><body>Hey,It is now %s.</body></html>" % now
+    return HttpResponse(html)
+
 
 # def Results_toFirestore():
 #     col_ref = store.collection('users')
@@ -85,23 +122,35 @@ store = firestore.client()
 Args:
     userid : string value
 Returns:
-    data : dictiionary of {follower_id -> hashtagList} 
+    data : dictionary of {follower_id -> hashtagList} 
 '''
 def getCollectionData(userid):
-    col_ref = store.collection("users/"+ userid+ "/followers")
-    data = {}
-    try:
-        followers = col_ref.get()  
-        for follower in followers:
-            tmp = "users/"+ userid+ "/followers/"+ follower.id + "/followedHashtags"
-            hashtags = store.collection(tmp).get()
-            hashtagsList=[]         
-            for hashtag in hashtags:
-                hashtagsList.append(hashtag.id)
-            data[follower.id] = hashtagsList
-    except google.cloud.exceptions.NotFound:
-        print(u'Missing data')
-    return data
+#    col_ref = store.collection("users/"+userid+"/following")
+    doc_ref = store.collection("users/XCeTunwzepf5rcvnLRS7/following/prakhar__gupta__/followedHashtags").document("prakhar__gupta__")
+    doc= doc_ref.get()
+    print(doc.to_dict()['recommendation'])
+
+    # try:
+    #     print("131")
+    #     #/users/XCeTunwzepf5rcvnLRS7/following/prakhar__gupta__/followedHashtags
+    #     followers = col_ref.get()
+    #     for follower in followers:
+    #         print(follower.id)
+    #         tmp = "users/" + userid + "/following/"+follower.id+"/followedHashtags"
+    #         print(tmp)  
+    #         hashtags = store.collection(tmp).get()    
+    #         for hashtag in hashtags: 
+    #             print("137")
+    #             tmpdict={} 
+    #             tmpdict = hashtag.to_dict()   
+    #             print(hashtag.to_dict())                        
+    #             data[follower.id] = tmpdict['recommendation']
+    # except google.cloud.exceptions.NotFound:
+    #     print('Missing data')
+
+    return doc.to_dict()
+
+
 
 '''Function to manipulate fetched data into desired dataframe.
 Args:
@@ -110,26 +159,74 @@ Returns:
     list: dataframe of followerid x hashtags, followers, hashtags
 
 '''
-def finalData():
+def finalData(request):
+
     data = getCollectionData("XCeTunwzepf5rcvnLRS7")
+    print(data)
+    tmp1= [] # tmp1 is storing followers [data ka key]
+    tmp2= [] # tmp2 is storing hashtags
+    tmp = {} # storing dict of hashtag -> products
+    tmp3= [] # tmp3 is storing products
 
-    for key in data:    
-        for hashtags in data[key]:        
-            for hashtag in hashtags["hashtags"]:
-                tmp1.append(key)
-                tmp2.append(hashtag)
+    for key in data: 
+        print(data[key])  
+        hashtags = data[key] 
+        for hashtag in hashtags[:40]:
+            print(hashtag)
 
-    df = pd.DataFrame(list(zip(tmp1, tmp2)), 
-                   columns =['Followerid', 'Hashtag'])
+            if hashtag not in tmp2:
+                url = "https://www.amazon.in/s?k=" + hashtag
+                data1 = scrape(url)[0]
+                
+                tmplist = [] # stores each hashtag's products
+                if data1['products']!= None:
+                    for product in data1['products']:
+                        tmplist.append(product['title']) # for the tmp dict
+                        # tmp3, tmp1 for zipping into df
+                        tmp3.append(product['title'])
+                        tmp1.append(key)
+
+                tmp[hashtag] = tmplist
+                print(hashtag,tmplist)
+
+            else: # if hashtag already pinged at Amazon before, then get product list from tmp dict.
+              
+                for i in range(len(tmp[hashtag])):
+                    tmp1.append(key)
+                    tmp3.append(tmp[hashtag][i])
+                    print(len(tmp[hashtag]))
+
+            tmp2.append(hashtag) # to indicate that hashtag has been pinged, and to keep count. 200 hashtags for now
+        print(key,len(tmp1), len(tmp2),len(tmp3))
+        # with open('scripts/search_results_output.jsonl','w') as outfile:
+        # data = scrape("https://www.amazon.in/s?k=laptops")
+        # print(data) 
+        # if data:
+        #     for product in data['products']:
+        #         product['search_url'] = "https://www.amazon.in/s?k=laptops"
+        #         print("Saving Product: %s"%product['title'])
+        #         json.dump(product,outfile)
+        #         outfile.write("\n")
+        #                 # sleep(5)
+
+    with open('scripts/search_results_output.jsonl','w') as outfile:
+        json.dump(tmp,outfile)
+
+    df = pd.DataFrame(list(zip(tmp1, tmp3)), 
+                   columns =['Followerid', 'product'])
 
     followers = df["Followerid"].unique()
-    hashtags = df["Hashtag"].unique()  
+    products = df["product"].unique()  
 
-    # transitioning Followerid and hashtags
+    # transitioning Followerid and products
     df['followers'] = df['Followerid'].apply(lambda x : np.argwhere(followers == x)[0][0])
-    df['hashtags'] = df['Hashtag'].apply(lambda x : np.argwhere(hashtags == x)[0][0])
-    
-    return df, followers , hashtags        
+    df['products'] = df['product'].apply(lambda x : np.argwhere(products == x)[0][0])
+    print(df)    
+#    return df, followers , products   
+
+    url = "https://www.amazon.in/s?k=Parasite"
+    return HttpResponse(scrape(url)[1])     
+
 
 
 def set_occurences(follower, item , occurences):
@@ -178,7 +275,7 @@ def final_calculations():
             k11 = v
             k12 = row_sum[i] - k11
             k21 = column_sum[j] - k11
-            k22 = total - k11 - k12 - k21
+            k22 = total - k11 - k12 - k21current_datetime
             pp_score[i,j] = rootLLR(k11, k12, k21, k22)
 
     result = np.flip(np.sort(pp_score.A, axis=1), axis=1)

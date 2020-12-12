@@ -141,16 +141,14 @@ def getCollectionData(userid):
     #         hashtags = store.collection(tmp).get()    
     #         for hashtag in hashtags: 
     #             print("137")
-    #             tmpdict={} 
     #             tmpdict = hashtag.to_dict()   
     #             print(hashtag.to_dict())                        
     #             data[follower.id] = tmpdict['recommendation']
     # except google.cloud.exceptions.NotFound:
     #     print('Missing data')
+    
     data=doc.to_dict()
- #   print(listToString(doc.to_dict()['recommendation'])) 
-    hashtags = fingerprint.main(listToString(doc.to_dict()['recommendation']))
-    print(len(hashtags))
+
     return data
 
 '''
@@ -171,24 +169,24 @@ Returns:
     list: dataframe of followerid x hashtags, followers, hashtags
 
 '''
-def finalData(request):
+def finalData():
 
     data = getCollectionData("XCeTunwzepf5rcvnLRS7")
     print(data)
     tmp1= [] # tmp1 is storing followers [data ka key]
     tmp2= [] # tmp2 is storing hashtags
     tmp = {} # storing dict of hashtag -> products
-    tmp3= [] # tmp3 is storing products
+    tmp3= [] # tmp3 is storing products 
 
-    for key in data: 
-        print(data[key])  
-        hashtags = data[key] 
-        
+    for key in data:
+
+        hashtags=fingerprint.main(listToString(data[key]))
+        print(len(hashtags))
         for hashtag in hashtags[:40]:
             print(hashtag)
 
             if hashtag not in tmp2:
-                url = "https://www.ParasiteParasiteParasiteParasiteParasiteamazon.in/s?k=" + hashtag
+                url = "https://www.amazon.in/s?k=" + hashtag
                 data1 = scrape(url)[0]
                 
                 tmplist = [] # stores each hashtag's products
@@ -219,30 +217,32 @@ def finalData(request):
     df = pd.DataFrame(list(zip(tmp1, tmp3)), 
                    columns =['Followerid', 'product'])
 
-    followers = df["Followerid"].unique()
-    products = df["product"].unique()  
+    followers = df["Followerid"]
+    products = df["product"]
 
     # transitioning Followerid and products
     df['followers'] = df['Followerid'].apply(lambda x : np.argwhere(followers == x)[0][0])
     df['products'] = df['product'].apply(lambda x : np.argwhere(products == x)[0][0])
-    print(df)    
-#    return df, followers , products   
+    print(len(followers),len(products))
+    return df,followers,products   
 
-    url = "https://www.amazon.in/s?k=Parasite"
-    return HttpResponse(scrape(url)[1])     
+    # url = "https://www.amazon.in/s?k=Parasite"
+    # return HttpResponse(scrape(url)[1])     
 
-
+''' 
+functions computing co-occurence matrix, and the math needed for recommendations.
+'''
 def set_occurences(follower, item , occurences):
     occurences[follower,item] += 1
     
 def co_occurences():
     data_array = finalData()
-    df,followers,hashtags=data_array    
-    occurences = csr_matrix((followers.shape[0], hashtags.shape[0]), dtype='int8')
-    df.apply(lambda row: set_occurences(row['followers'],row['hashtags'],occurences), axis=1)
+    df,followers,products=data_array    
+    occurences = csr_matrix((followers.shape[0], products.shape[0]), dtype='int8')
+    df.apply(lambda row: set_occurences(row['followers'],row['products'],occurences), axis=1)
     cooc = occurences.transpose().dot(occurences)
     cooc.setdiag(0)
-    return cooc, hashtags
+    return cooc, followers
 
 def xLogX(x):
     return x * np.log(x) if x != 0 else 0.0
@@ -265,8 +265,11 @@ def rootLLR(k11, k12, k21, k22):
         sqrt = -sqrt
     return sqrt
 
+'''
+Using the above functions to compute result indices for each product
+'''
 def final_calculations():
-    co_occurence,hashtags = co_occurences()
+    co_occurence,followers = co_occurences()
     
     row_sum = np.sum(co_occurence, axis=0).A.flatten()
     column_sum = np.sum(co_occurence, axis=1).A.flatten()
@@ -278,7 +281,7 @@ def final_calculations():
             k11 = v
             k12 = row_sum[i] - k11
             k21 = column_sum[j] - k11
-            k22 = total - k11 - k12 - k21current_datetime
+            k22 = total - k11 - k12 - k21
             pp_score[i,j] = rootLLR(k11, k12, k21, k22)
 
     result = np.flip(np.sort(pp_score.A, axis=1), axis=1)
@@ -291,21 +294,25 @@ def final_calculations():
     max = max_indicator_indices.max()
     indicators = indicators[:, :max+1]
     indicators_indices = indicators_indices[:, :max+1]
-    return result_indices, hashtags
+    return result_indices, followers
 
-def Results_toFirestore(request):
-    results,hashtags = final_calculations()
+'''
+Computing final results.
+'''
+def Results(request):
+    results,followers = final_calculations()
 
     for i in range(len(results)):
-        hashtag = hashtags[i]
-        result = results[i] 
+
+        follower = followers[i]
+        result = results[i]
 
         dict = {}
 
-        for j in range(len(result)):
-            dict[str(j)]= str(hashtags[result[j]])    
+        for j in range(5):
+            dict[str(j)]= str(followers[result[j]])    
 
-        store.collection("recommendations").document(hashtag).set(dict)
+        store.collection("recommendations").document(follower).set(dict)
 
     now = datetime.datetime.now()
     html = "<html><body>It is now %s,and the function is successfully deployed!!</body></html>" % now

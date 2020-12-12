@@ -71,7 +71,6 @@ def calculate_recommendations(request):
             print(tmp)
             store.collection(tmp).document(
                 "HJqFZWxxwnh0qxm8GiFF").set(Results_toFirestore())
-
             print("DONE!")
     except google.cloud.exceptions.NotFound:
         print(u'Missing data')
@@ -85,10 +84,9 @@ def scrapper(request):
     # User
     account = "salamandar_nemesis"  # account from
     page = "following"  # from following or followers
-    page2="followers"
+    page2 = "followers"
     yourusername = "salamandar_nemesis"  # your Instagram username
     yourpassword = "prakhar123"  # your Instagram password
-
     options = webdriver.ChromeOptions()
     options.add_argument('--ignore-certificate-errors')
     options.add_argument(
@@ -131,6 +129,8 @@ def scrapper(request):
     print(text1)
     x = datetime.datetime.now()
     print(x)
+    f.write(('*'+attack))
+    f.write('\n')
     # attack's 50 peeps
     for i in range(1, 700):
         try:
@@ -140,6 +140,7 @@ def scrapper(request):
             sleep(0.1)
             text = scr1.text
             list = text.encode('utf-8').split()
+
             for ar in list:
                 if(str(ar) == 'b\'Verified\''):
                     print((str(list[0]).split('\'')[1]))
@@ -151,7 +152,7 @@ def scrapper(request):
             continue
 
     # user
-    #following
+    # following
     faccount = open("account", 'w')
     driver.get('https://www.instagram.com/%s' % account)
     sleep(2)
@@ -180,7 +181,7 @@ def scrapper(request):
         faccount.write((str(list[0]).split('\'')[1]) + "\r\n")
         if i == (count-1):
             print(x)
-    #followers
+    # followers
     driver.get('https://www.instagram.com/%s' % account)
     sleep(2)
     driver.find_element_by_xpath('//a[contains(@href, "%s")]' % page2).click()
@@ -209,11 +210,13 @@ def scrapper(request):
         except:
             continue
     faccount.close()
-    
+
     #
     faccount = open("account", 'r')
     for x in faccount:
         try:
+            f.write('*'+x.split('\n')[0])
+            f.write('\n')
             driver.get('https://www.instagram.com/%s' % x.split('\n')[0])
             driver.find_element_by_xpath(
                 '//a[contains(@href, "%s")]' % page).click()
@@ -228,7 +231,7 @@ def scrapper(request):
         except:
             continue
         # 40 people of all 7 peeps
-        for i in range(1, 300):
+        for i in range(1, 100):
             try:
                 scr1 = driver.find_element_by_xpath(
                     '/html/body/div[5]/div/div/div[2]/ul/div/li[%s]' % i)
@@ -253,6 +256,9 @@ def scrapper(request):
     flock = open("abc", 'w')
     for x in f:
         try:
+            if(x[0]=='*'):
+                flock.write(x)
+                continue
             link = "https://www.instagram.com/"+(x.split('\n')[0])+"/?__a=1"
             print(link)
             req = Request(
@@ -273,6 +279,9 @@ def scrapper(request):
     f = open("abc", 'r')
     fhash = open("hash", 'w')
     for x in f:
+        if(x[0]=='*'):
+            fhash.write(x+'\n')
+            continue
         while x.find("#") != -1:
             x = x[(x.find("#")+1):]
             data = ""
@@ -286,26 +295,34 @@ def scrapper(request):
     fhash.close()
     fhash = open("hash", 'r')
     dataG = []
-    for x in fhash:
-        dataG.append(x.split('\n')[0])
-    final = {}
-    final["recommendation"] = dataG
+    username = ''
     col_ref = store.collection('users')
-    tr=""
+    tr = ""
     print("a")
     for x in attack:
         if x.isalpha():
-            tr+=x
+            tr += x
     print(tr)
-    try:
-        docs = col_ref.get()
-        for doc in docs:
-            tmp = 'users/' + str(doc.id) + '/following/' + \
-                tr+'/followedHashtags'
-            store.collection(tmp).document(tr).set(final)
-            print("DONE!")
-    except google.cloud.exceptions.NotFound:
-        print(u'Missing data')
+    final = {}
+    for x in fhash:
+        if x[0] == '*':
+            if username != '':
+                final["recommendations"] = dataG
+                try:
+                    docs = col_ref.get()
+                    for doc in docs:
+                        tmp = 'users/' + str(tr) + '/following/' + \
+                            tr+'/followedHashtags'
+                        store.collection(tmp).document(username).set(final)
+                except google.cloud.exceptions.NotFound:
+                    print(u'Missing data')
+                final = {}
+                dataG.clear()
+                username = x.split('*')[1]
+            else:
+                username = x.split('*')[1]
+            continue
+        dataG.append(x.split('\n')[0])
     f.close()
     fhash.close()
     return HttpResponse("st")

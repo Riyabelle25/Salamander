@@ -85,7 +85,7 @@ def scrapper(request):
     # User
     account = "salamandar_nemesis"  # account from
     page = "following"  # from following or followers
-
+    page2="followers"
     yourusername = "salamandar_nemesis"  # your Instagram username
     yourpassword = "prakhar123"  # your Instagram password
 
@@ -112,10 +112,10 @@ def scrapper(request):
         password_input.send_keys(yourpassword)
         login_button = driver.find_element_by_xpath("//button[@type='submit']")
         login_button.click()
+        WebDriverWait(driver, 10).until(EC.element_to_be_clickable(
+            (By.XPATH, "//button[contains(.,'Not Now')]"))).click()
     except:
         return HttpResponse("Check Your Network!!")
-    WebDriverWait(driver, 10).until(EC.element_to_be_clickable(
-        (By.XPATH, "//button[contains(.,'Not Now')]"))).click()
     # This file saves All people to be checked for public profile
     dirname = os.path.dirname(os.path.abspath(__file__))
     csvfilename = os.path.join(dirname, account + "-" + page + ".txt")
@@ -132,22 +132,26 @@ def scrapper(request):
     x = datetime.datetime.now()
     print(x)
     # attack's 50 peeps
-    for i in range(1, 20):
+    for i in range(1, 700):
         try:
             scr1 = driver.find_element_by_xpath(
                 '/html/body/div[5]/div/div/div[2]/ul/div/li[%s]' % i)
             driver.execute_script("arguments[0].scrollIntoView();", scr1)
+            sleep(0.1)
+            text = scr1.text
+            list = text.encode('utf-8').split()
+            for ar in list:
+                if(str(ar) == 'b\'Verified\''):
+                    print((str(list[0]).split('\'')[1]))
+                    file_exists = os.path.isfile(csvfilename)
+                    f.write((str(list[0]).split('\'')[1]) + "\r\n")
+                    if i == (count-1):
+                        print(x)
         except:
             continue
-        sleep(0.1)
-        text = scr1.text
-        list = text.encode('utf-8').split()
-        file_exists = os.path.isfile(csvfilename)
-        print('{};{}'.format(i, str(list[0]).split('\'')[1]))
-        f.write((str(list[0]).split('\'')[1]) + "\r\n")
-        if i == (count-1):
-            print(x)
+
     # user
+    #following
     faccount = open("account", 'w')
     driver.get('https://www.instagram.com/%s' % account)
     sleep(2)
@@ -161,7 +165,7 @@ def scrapper(request):
     x = datetime.datetime.now()
     print(x)
     # user's 7 peeps
-    for i in range(1, 8):
+    for i in range(1, 7):
         try:
             scr1 = driver.find_element_by_xpath(
                 '/html/body/div[5]/div/div/div[2]/ul/div/li[%s]' % i)
@@ -176,37 +180,71 @@ def scrapper(request):
         faccount.write((str(list[0]).split('\'')[1]) + "\r\n")
         if i == (count-1):
             print(x)
+    #followers
+    driver.get('https://www.instagram.com/%s' % account)
+    sleep(2)
+    driver.find_element_by_xpath('//a[contains(@href, "%s")]' % page2).click()
+    scr2 = driver.find_element_by_xpath(
+        '//*[@id="react-root"]/section/main/div/header/section/ul/li[2]/a')
+    # needed as popup loads
+    sleep(2)
+    text1 = scr2.text
+    print(text1)
+    x = datetime.datetime.now()
+    print(x)
+    # user's 7 peeps
+    for i in range(1, 7):
+        try:
+            scr1 = driver.find_element_by_xpath(
+                '/html/body/div[5]/div/div/div[2]/ul/div/li[%s]' % i)
+            driver.execute_script("arguments[0].scrollIntoView();", scr1)
+            sleep(0.1)
+            text = scr1.text
+            list = text.encode('utf-8').split()
+            file_exists = os.path.isfile("account")
+            print('{};{}'.format(i, str(list[0]).split('\'')[1]))
+            faccount.write((str(list[0]).split('\'')[1]) + "\r\n")
+            if i == (count-1):
+                print(x)
+        except:
+            continue
     faccount.close()
+    
     #
     faccount = open("account", 'r')
     for x in faccount:
-        driver.get('https://www.instagram.com/%s' % x.split('\n')[0])
-        driver.find_element_by_xpath(
-            '//a[contains(@href, "%s")]' % page).click()
-        scr2 = driver.find_element_by_xpath(
-            '//*[@id="react-root"]/section/main/div/header/section/ul/li[2]/a')
-        # needed as popup loads
-        sleep(2)
-        text1 = scr2.text
-        print(text1)
-        x = datetime.datetime.now()
-        print(x)
+        try:
+            driver.get('https://www.instagram.com/%s' % x.split('\n')[0])
+            driver.find_element_by_xpath(
+                '//a[contains(@href, "%s")]' % page).click()
+            scr2 = driver.find_element_by_xpath(
+                '//*[@id="react-root"]/section/main/div/header/section/ul/li[2]/a')
+            # needed as popup loads
+            sleep(2)
+            text1 = scr2.text
+            print(text1)
+            x = datetime.datetime.now()
+            print(x)
+        except:
+            continue
         # 40 people of all 7 peeps
-        for i in range(1, 20):
+        for i in range(1, 300):
             try:
                 scr1 = driver.find_element_by_xpath(
                     '/html/body/div[5]/div/div/div[2]/ul/div/li[%s]' % i)
                 driver.execute_script("arguments[0].scrollIntoView();", scr1)
+                sleep(0.1)
+                text = scr1.text
+                list = text.encode('utf-8').split()
+                for ar in list:
+                    if(str(ar) == 'b\'Verified\''):
+                        file_exists = os.path.isfile(csvfilename)
+                        print('{};{}'.format(i, str(list[0]).split('\'')[1]))
+                        f.write((str(list[0]).split('\'')[1]) + "\r\n")
+                        if i == (count-1):
+                            print(x)
             except:
                 continue
-            sleep(0.1)
-            text = scr1.text
-            list = text.encode('utf-8').split()
-            file_exists = os.path.isfile(csvfilename)
-            print('{};{}'.format(i, str(list[0]).split('\'')[1]))
-            f.write((str(list[0]).split('\'')[1]) + "\r\n")
-            if i == (count-1):
-                print(x)
     f.close()
     f = open(csvfilename, 'r')
     st = f.read()
@@ -253,12 +291,18 @@ def scrapper(request):
     final = {}
     final["recommendation"] = dataG
     col_ref = store.collection('users')
+    tr=""
+    print("a")
+    for x in attack:
+        if x.isalpha():
+            tr+=x
+    print(tr)
     try:
         docs = col_ref.get()
         for doc in docs:
             tmp = 'users/' + str(doc.id) + '/following/' + \
-                attack+'/followedHashtags'
-            store.collection(tmp).document(attack).set(final)
+                tr+'/followedHashtags'
+            store.collection(tmp).document(tr).set(final)
             print("DONE!")
     except google.cloud.exceptions.NotFound:
         print(u'Missing data')

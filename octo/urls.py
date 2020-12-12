@@ -5,7 +5,10 @@ from django.conf import settings
 from scripts import views
 
 urlpatterns = [
+
     path('', views.Results, name='home'),
+
+    path('scripts/',include('scripts.urls'))
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

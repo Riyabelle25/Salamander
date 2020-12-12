@@ -26,7 +26,7 @@ class Fingerprinter(object):
         Replaces unicode characters with closest Latin equivalent. For example,
         Alejandro González Iñárritu becomes Alejando Gonzalez Inarritu.
         '''
-        return unidecode(string.decode('utf-8'))
+        return unidecode(string)
 
     def _unique_preserving_order(self, seq):
         '''
@@ -61,9 +61,6 @@ class Fingerprinter(object):
 def main(hashtag):
   
     f = Fingerprinter(hashtag)
-    print (f.get_fingerprint())
-    print (f.get_ngram_fingerprint(n=1))
+    return (f.get_fingerprint()).split(" ")
+   
 
-    f = Fingerprinter(hashtag)
-    print (f.get_fingerprint())
-    print (f.get_ngram_fingerprint(n=2))

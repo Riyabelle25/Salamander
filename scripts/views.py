@@ -128,7 +128,7 @@ def getCollectionData(userid):
 #    col_ref = store.collection("users/"+userid+"/following")
     doc_ref = store.collection("users/XCeTunwzepf5rcvnLRS7/following/prakhar__gupta__/followedHashtags").document("prakhar__gupta__")
     doc= doc_ref.get()
-    print(doc.to_dict()['recommendation'])
+    print(131)
 
     # try:
     #     print("131")
@@ -147,11 +147,23 @@ def getCollectionData(userid):
     #             data[follower.id] = tmpdict['recommendation']
     # except google.cloud.exceptions.NotFound:
     #     print('Missing data')
+    data=doc.to_dict()
+ #   print(listToString(doc.to_dict()['recommendation'])) 
+    hashtags = fingerprint.main(listToString(doc.to_dict()['recommendation']))
+    print(len(hashtags))
+    return data
 
-    return doc.to_dict()
-
-
-
+'''
+Convert list of hashtags to long string
+'''
+def listToString(s):  
+    
+    # initialize an empty string 
+    str1 = " " 
+    
+    # return string   
+    return (str1.join(s)) 
+          
 '''Function to manipulate fetched data into desired dataframe.
 Args:
     none.
@@ -171,11 +183,12 @@ def finalData(request):
     for key in data: 
         print(data[key])  
         hashtags = data[key] 
+        
         for hashtag in hashtags[:40]:
             print(hashtag)
 
             if hashtag not in tmp2:
-                url = "https://www.amazon.in/s?k=" + hashtag
+                url = "https://www.ParasiteParasiteParasiteParasiteParasiteamazon.in/s?k=" + hashtag
                 data1 = scrape(url)[0]
                 
                 tmplist = [] # stores each hashtag's products
@@ -195,19 +208,10 @@ def finalData(request):
                     tmp1.append(key)
                     tmp3.append(tmp[hashtag][i])
                     print(len(tmp[hashtag]))
-
+            
             tmp2.append(hashtag) # to indicate that hashtag has been pinged, and to keep count. 200 hashtags for now
+        
         print(key,len(tmp1), len(tmp2),len(tmp3))
-        # with open('scripts/search_results_output.jsonl','w') as outfile:
-        # data = scrape("https://www.amazon.in/s?k=laptops")
-        # print(data) 
-        # if data:
-        #     for product in data['products']:
-        #         product['search_url'] = "https://www.amazon.in/s?k=laptops"
-        #         print("Saving Product: %s"%product['title'])
-        #         json.dump(product,outfile)
-        #         outfile.write("\n")
-        #                 # sleep(5)
 
     with open('scripts/search_results_output.jsonl','w') as outfile:
         json.dump(tmp,outfile)
@@ -226,7 +230,6 @@ def finalData(request):
 
     url = "https://www.amazon.in/s?k=Parasite"
     return HttpResponse(scrape(url)[1])     
-
 
 
 def set_occurences(follower, item , occurences):

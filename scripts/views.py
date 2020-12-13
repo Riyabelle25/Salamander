@@ -5,7 +5,7 @@ import firebase_admin
 import google.cloud
 import pandas as pd
 import numpy as np
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix,lil_matrix
 from ebaysdk.finding import Connection as finding
 from bs4 import BeautifulSoup
 
@@ -16,8 +16,8 @@ from time import sleep
 from scripts import fingerprint
 from firebase_admin import credentials, firestore
 
-creds = credentials.Certificate("scripts/serviceKey.json")
-myapp = firebase_admin.initialize_app(creds)
+credz = credentials.Certificate("scripts/serviceKey.json")
+app = firebase_admin.initialize_app(credz)
 
 store = firestore.client()
 
@@ -53,61 +53,6 @@ def scrape(url):
     # Pass the HTML of the page and create 
     return e.extract(r.text), r.text
 
-# Create your dummy views here.
-def current_datetime(request):
-    now = datetime.datetime.now()
-    html = "<html><body>Hey,It is now %s.</body></html>" % now
-    return HttpResponse(html)
-
-
-# def Results_toFirestore():
-#     col_ref = store.collection('users')
-#     # /users/XCeTunwzepf5rcvnLRS7/followers/HJqFZWxxwnh0qxm8GiFF/followedHashtags
-#     data = {}
-#     try:
-#         docs = col_ref.get()  
-#         for doc in docs:
-#             tmp = 'users/'+ str(doc.id) + '/followers/HJqFZWxxwnh0qxm8GiFF/followedHashtags'
-#             print(tmp)
-#             sub_doc_refs = store.collection(tmp).get()
-#             sub_docs=[]         
-#             for sub_doc in sub_doc_refs:
-#                 sub_docs.append(sub_doc.id)
-#             data["recommendations"] = sub_docs
-#             print(data)
-#         # mapping follower_id -> followedHashtags_id
-#     except google.cloud.exceptions.NotFound:
-#         print(u'Missing data')
-#     return data
-
-
-# def calculate_recommendations(request):
-#     """Responds to any HTTP request.
-#     Args:
-#         request (flask.Request): HTTP request object.
-#     Returns:
-#         The response text or any set of values that can be turned into a
-#         Response object using
-#         `make_response <http://flask.pocoo.org/docs/1.0/api/#flask.Flask.make_response>`.
-#     """
-#     col_ref = store.collection('users')
-#     try:
-#         docs = col_ref.get()
-#         for doc in docs:
-#             tmp = 'users/'+ str(doc.id) + '/followers'
-#             print(tmp)
-#             store.collection(tmp).document("HJqFZWxxwnh0qxm8GiFF").set(Results_toFirestore())
-
-#             print("DONE!")
-#     except google.cloud.exceptions.NotFound:
-#         print(u'Missing data')
-#     now = datetime.datetime.now()
-#     html = "<html><body>It is now %s,and the function is successfully deployed!!</body></html>" % now
-#     return HttpResponse(html)
-
-##################################################################################################################################################################
-
-
 '''Function to get data from firestore collection.
     collection = "users/{userid}/followers/{followerid}/followedHashtags"
 Args:
@@ -118,23 +63,27 @@ Returns:
 def getCollectionData(userid):
     col_ref = store.collection("users/"+userid+"/following")
     data = {}
-    # doc_ref = store.collection("users/XCeTunwzepf5rcvnLRS7/following/prakhar__gupta__/followedHashtags").document("prakhar__gupta__")
-    # doc= doc_ref.get()
-    # print(131)
 
     try:
         print("131")
-        #/users/XCeTunwzepf5rcvnLRS7/following/prakhar__gupta__/followedHashtags
+
         followers = col_ref.get()
         for follower in followers:
             print(follower.id)
-            tmp = "users/" + userid + "/following/"+follower.id+"/followedHashtags"
-            print(tmp)  
-            hashtags = store.collection(tmp).get()    
-            for hashtag in hashtags: 
-                print("137")
-                print(hashtag.id)                     
-                data[follower.id] = hashtag.to_dict()['recommendation']
+            current_path = "users/" + userid + "/following/" + follower.id
+            print(current_path) 
+            print(follower.to_dict()) 
+            if follower.to_dict()['recommendations']!=None:
+                data[follower.id] = follower.to_dict()['recommendations']
+                print(data) 
+            # hashtags = store.collection(tmp).get()    
+            # for hashtag in hashtags: 
+            #     print("137")
+            #     print(hashtag.id)
+            #     print(hashtag.to_dict()) 
+            #     if hashtag.to_dict()['recommendations']!=None:
+            #         data[hashtag.id] = hashtag.to_dict()['recommendations']
+            #         print(data)
     except google.cloud.exceptions.NotFound:
         print('Missing data')
 
@@ -143,11 +92,9 @@ def getCollectionData(userid):
 '''
 Convert list of hashtags to long string
 '''
-def listToString(s):  
-    
+def listToString(s):      
     # initialize an empty string 
-    str1 = " " 
-    
+    str1 = " "     
     # return string   
     return (str1.join(s)) 
           
@@ -160,60 +107,49 @@ Returns:
 '''
 def finalData():
 
-    data = getCollectionData("XCeTunwzepf5rcvnLRS7")
+    data = getCollectionData("prakhargupta")
+    # data = {"Nish":["MHA","Darkacademia","Knights","Poetry","Pups"],
+    # "Sarthak":["Disney","Brooklyn99","Pups","Babies","Poetry"],
+    # "Riya":["MHA","Darkacademia","Brookyln99","Cupcakes","HarryPotter"],
+    # }
     print(data)
     tmp1= [] # tmp1 is storing followers [data ka key]
-    tmp2= [] # tmp2 is storing hashtags
-    tmp = {} # storing dict of hashtag -> products
-    tmp3= [] # tmp3 is storing products 
+    tmp3= [] # tmp3 is storing products ke urls
+    
 
     for key in data:
 
         hashtags=fingerprint.main(listToString(data[key]))
         print(len(hashtags))
+
         for hashtag in hashtags[:10]:
             print(hashtag)
+            url = "https://www.amazon.in/s?k=" + hashtag
+            data1 = scrape(url)[0]
+    
+            if data1['products']!= None:
+                for product in data1['products']:
 
-            if hashtag not in tmp2:
-                url = "https://www.amazon.in/s?k=" + hashtag
-                data1 = scrape(url)[0]
-                
-                tmplist = [] # stores each hashtag's products
-                if data1['products']!= None:
-                    for product in data1['products']:
-                        tmplist.append(product['title']) # for the tmp dict
-                        # tmp3, tmp1 for zipping into df
-                        tmp3.append(product['title'])
-                        tmp1.append(key)
-
-                tmp[hashtag] = tmplist
-                print(hashtag,tmplist)
-
-            else: # if hashtag already pinged at Amazon before, then get product list from tmp dict.
-              
-                for i in range(len(tmp[hashtag])):
+                    # tmp3, tmp1 for zipping into df
+                    product_url= "https://www.amazon.in" + product['url']
+                    print(product_url)
+                    tmp3.append(product_url)
                     tmp1.append(key)
-                    tmp3.append(tmp[hashtag][i])
-                    print(len(tmp[hashtag]))
-            
-            tmp2.append(hashtag) # to indicate that hashtag has been pinged, and to keep count. 200 hashtags for now
         
-        print(key,len(tmp1), len(tmp2),len(tmp3))
-
-    with open('scripts/search_results_output.jsonl','w') as outfile:
-        json.dump(tmp,outfile)
+    print(key,len(tmp1),len(tmp3))
 
     df = pd.DataFrame(list(zip(tmp1, tmp3)), 
                    columns =['Followerid', 'product'])
 
-    followers = df["Followerid"]
-    products = df["product"]
+    followers = df["Followerid"].unique()
+    products = df["product"].unique()
 
     # transitioning Followerid and products
     df['followers'] = df['Followerid'].apply(lambda x : np.argwhere(followers == x)[0][0])
     df['products'] = df['product'].apply(lambda x : np.argwhere(products == x)[0][0])
     print(len(followers),len(products))
-    return df,followers,products   
+    print(df.head(10))
+    return df,followers,products,tmp1
 
     # url = "https://www.amazon.in/s?k=Parasite"
     # return HttpResponse(scrape(url)[1])     
@@ -226,12 +162,16 @@ def set_occurences(follower, item , occurences):
     
 def co_occurences():
     data_array = finalData()
-    df,followers,products=data_array    
-    occurences = csr_matrix((followers.shape[0], products.shape[0]), dtype='int8')
+    df,followers,products,tmp1=data_array    
+    occurences = lil_matrix((followers.shape[0], products.shape[0]), dtype='int8')
+    print("164")
     df.apply(lambda row: set_occurences(row['followers'],row['products'],occurences), axis=1)
+    print("167")
     cooc = occurences.transpose().dot(occurences)
+    print("169")
     cooc.setdiag(0)
-    return cooc, followers
+    print("171")
+    return cooc, followers , tmp1, products
 
 def xLogX(x):
     return x * np.log(x) if x != 0 else 0.0
@@ -258,12 +198,13 @@ def rootLLR(k11, k12, k21, k22):
 Using the above functions to compute result indices for each product
 '''
 def final_calculations():
-    co_occurence,followers = co_occurences()
+    co_occurence,followers,tmp1,products = co_occurences()
     
     row_sum = np.sum(co_occurence, axis=0).A.flatten()
     column_sum = np.sum(co_occurence, axis=1).A.flatten()
     total = np.sum(row_sum, axis=0)
-    pp_score = csr_matrix((co_occurence.shape[0], co_occurence.shape[1]), dtype='double')
+    pp_score = lil_matrix((co_occurence.shape[0], co_occurence.shape[1]), dtype='double')
+    print("205") #pp_score.tolil()
     cx = co_occurence.tocoo()
     for i,j,v in zip(cx.row, cx.col, cx.data):
         if v != 0:
@@ -283,23 +224,29 @@ def final_calculations():
     max = max_indicator_indices.max()
     indicators = indicators[:, :max+1]
     indicators_indices = indicators_indices[:, :max+1]
-    return result_indices, followers
+    return result_indices, followers , tmp1,products
 
 '''
 Computing final results.
 '''
 def Results(request):
-    results,followers = final_calculations()
+    results,followers,tmp1,products = final_calculations()
+
+# followers = [0,0,0,0,0,0,0,0,1,1,1,1,1,2,2.......]
+# products = [0,1,2,3,4,5,6,3,4,5,6,.................]
 
     for i in range(len(results)):
-
-        follower = followers[i]
+        print(len(results))
+        follower = tmp1[i]
         result = results[i]
-
+        print(follower)
         dict = {}
+        dict[str(0)] = str(products[i])
+        for j in range(1,31):
+            print(j)
+            dict[str(j)]= str(products[result[j]])  
 
-        for j in range(5):
-            dict[str(j)]= str(followers[result[j]])    
+    # {"0":"",}
 
         store.collection("recommendations").document(follower).set(dict)
 

@@ -558,6 +558,8 @@ def scrapper(request):
     for x in fhash:
         if x[0] == '*':
             if username != '':
+                username = removeUnderscore(username)
+
                 final["recommendations"] = dataG
                 try:
                     docs = col_ref.get()
@@ -576,3 +578,11 @@ def scrapper(request):
     f.close()
     fhash.close()
     return HttpResponse("st")
+
+def removeUnderscore(ref):
+    tr = ""
+    print("a")
+    for x in ref:
+        if x.isalpha():
+            tr += x
+    return tr

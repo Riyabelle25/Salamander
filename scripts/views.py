@@ -43,7 +43,7 @@ app = firebase_admin.initialize_app(credz)
 
 store = firestore.client()
 
-
+#SCRAPE THE PRODUCT DATA
 def scrape(url):  
     # Create an Extractor by reading from the YAML file
     e = Extractor.from_yaml_file('scripts/search_results.yml')
@@ -72,7 +72,7 @@ def scrape(url):
             print("Page %s must have been blocked by Amazon as the status code was %d"%(url,r.status_code))
         print(r.status_code)
         return None
-    # Pass the HTML of the page and create 
+    # Pass the HTML of the page and create
     return e.extract(r.text), r.text
 
 '''Function to get data from firestore collection.
@@ -82,6 +82,7 @@ Args:
 Returns:
     data : dictionary of {follower_id -> hashtagList} 
 '''
+
 def getCollectionData(userid):
     col_ref = store.collection("users/"+userid+"/following")
 
@@ -365,7 +366,7 @@ def scrapper(userNamed,ps,target):
     x = datetime.datetime.now()
     print(x)
     # user's 7 peeps
-    for i in range(1, 7):
+    for i in range(1, 10):
         try:
             scr1 = driver.find_element_by_xpath(
                 '/html/body/div[5]/div/div/div[2]/ul/div/li[%s]' % i)
@@ -380,34 +381,6 @@ def scrapper(userNamed,ps,target):
         faccount.write((str(list[0]).split('\'')[1]) + "\r\n")
         if i == (count-1):
             print(x)
-    # followers
-    driver.get('https://www.instagram.com/%s' % account)
-    sleep(2)
-    driver.find_element_by_xpath('//a[contains(@href, "%s")]' % page2).click()
-    scr2 = driver.find_element_by_xpath(
-        '//*[@id="react-root"]/section/main/div/header/section/ul/li[2]/a')
-    # needed as popup loads
-    sleep(2)
-    text1 = scr2.text
-    print(text1)
-    x = datetime.datetime.now()
-    print(x)
-    # user's 7 peeps
-    for i in range(1, 7):
-        try:
-            scr1 = driver.find_element_by_xpath(
-                '/html/body/div[5]/div/div/div[2]/ul/div/li[%s]' % i)
-            driver.execute_script("arguments[0].scrollIntoView();", scr1)
-            sleep(0.1)
-            text = scr1.text
-            list = text.encode('utf-8').split()
-            file_exists = os.path.isfile("account")
-            print('{};{}'.format(i, str(list[0]).split('\'')[1]))
-            faccount.write((str(list[0]).split('\'')[1]) + "\r\n")
-            if i == (count-1):
-                print(x)
-        except:
-            continue
     faccount.close()
 
     #
@@ -555,3 +528,18 @@ def home(request):
     else:
         form = newUserRegistration()
         return render(request,'scripts/home.html',{'form':form,})
+
+def getResults(request,target='prakhar__gupta__'):
+    userid = removeUnderscore(target)
+    col_ref = store.collection("recommendations").document(userid)
+    data = []
+    try:
+        print("131")
+        followers = col_ref.get()
+        if followers.exists:
+            for x in followers.to_dict():
+                data.append(followers.to_dict()[x])
+            print(data)
+    except google.cloud.exceptions.NotFound:
+        print('Missing data')
+    return HttpResponse(str(data))

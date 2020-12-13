@@ -1,28 +1,32 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gift Recommendation System</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="{% static 'static/styles.css' %}">
     <link rel="icon" type="image/x-icon" href="assets/logo.png">
 </head>
 <body>
-    <div class="logo" ><img src="./assets/logo.png"></div>
+    <div class="logo" ><img src="{% static 'static/assets/logo.png' %}"></div>
     
-    <form class="formdiv" >
+    <form class="formdiv" method="post">
+        {% csrf_token %}
         <fieldset class="fieldset">
             <legend>Enter your Instagram Credentials:</legend>
         <label for="username" class="label-text">Username:</label><br>
-        <input type="text" name="username" class="input-text"><br>
+        {{form.username}}<br>
         <label for="password" class="label-text">Password:</label><br>
-        <input type="text" name="password" class="input-text"><br><br>
+        {{form.ps}}<br><br>
+        <label for="username" class="label-text">Target Username:</label><br>
+        {{form.Target}}<br>
         <input type="submit" class="button-submit"value="Next">
         </fieldset>
     </form>
     
-    <script src="js/three.r119.min.js"></script>
-    <script src="js/vanta.birds.min.js"></script>
+    <script src="{% static 'static/js/three.r119.min.js' %}"></script>
+    <script src="{% static 'static/js/vanta.birds.min.js' %}"></script>
     <script>
     VANTA.BIRDS({
       el: "*",

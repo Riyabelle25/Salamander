@@ -2,5 +2,6 @@ from django.contrib import admin
 from django.urls import path, include
 from . import views
 urlpatterns = [
-    path('scrapper/',views.scrapper , name='Scrapping Followers'),
+    path('scrapper/',views.home , name='Scrapping Followers'),
+    path('getResults',views.getResults,name='Results'),
 ]

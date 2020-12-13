@@ -34,14 +34,15 @@ import json
 from time import sleep
 from scripts import fingerprint
 from firebase_admin import credentials, firestore
+from scripts import utils
 
 credz = credentials.Certificate("scripts/serviceKey.json")
 app = firebase_admin.initialize_app(credz)
 
 store = firestore.client()
+user_id = ""
 
-
-def scrape(url):  
+def scrape(url,start_time):  
     # Create an Extractor by reading from the YAML file
     e = Extractor.from_yaml_file('scripts/search_results.yml')
 
@@ -60,7 +61,7 @@ def scrape(url):
 
     # Download the page using requests
     print("Downloading %s"%url)
-    r = requests.get(url, headers=headers)
+    r = requests.get(url, headers=headers, timeout=28)
     # Simple check to check if page was blocked (Usually 503)
     if r.status_code > 500:
         if "To discuss automated access to Amazon data please contact" in r.text:
@@ -70,7 +71,7 @@ def scrape(url):
         print(r.status_code)
         return None
     # Pass the HTML of the page and create 
-    return e.extract(r.text), r.text
+    return e.extract(r.text)
 
 '''Function to get data from firestore collection.
     collection = "users/{userid}/followers/{followerid}/followedHashtags"
@@ -81,13 +82,14 @@ Returns:
 '''
 def getCollectionData(userid):
     col_ref = store.collection("users/"+userid+"/following")
-
+    print(userid)
     data = {}
 
     try:
         print("131")
 
         followers = col_ref.get()
+        print(followers)
         for follower in followers:
             print(follower.id)
             current_path = "users/" + userid + "/following/" + follower.id
@@ -96,14 +98,7 @@ def getCollectionData(userid):
             if follower.to_dict()['recommendations']!=None:
                 data[follower.id] = follower.to_dict()['recommendations']
                 print(data) 
-            # hashtags = store.collection(tmp).get()    
-            # for hashtag in hashtags: 
-            #     print("137")
-            #     print(hashtag.id)
-            #     print(hashtag.to_dict()) 
-            #     if hashtag.to_dict()['recommendations']!=None:
-            #         data[hashtag.id] = hashtag.to_dict()['recommendations']
-            #         print(data)
+
     except google.cloud.exceptions.NotFound:
         print('Missing data')
 
@@ -117,7 +112,8 @@ def listToString(s):
     str1 = " "     
     # return string   
     return (str1.join(s)) 
-          
+
+ 
 '''Function to manipulate fetched data into desired dataframe.
 Args:
     none.
@@ -128,6 +124,7 @@ Returns:
 def finalData():
 
     data = getCollectionData("prakhargupta")
+
     # data = {"Nish":["MHA","Darkacademia","Knights","Poetry","Pups"],
     # "Sarthak":["Disney","Brooklyn99","Pups","Babies","Poetry"],
     # "Riya":["MHA","Darkacademia","Brookyln99","Cupcakes","HarryPotter"],
@@ -145,21 +142,22 @@ def finalData():
         for hashtag in hashtags[:10]:
             print(hashtag)
             url = "https://www.amazon.in/s?k=" + hashtag
-            data1 = scrape(url)[0]
-    
-            if data1['products']!= None:
-                for product in data1['products']:
-
-                    # tmp3, tmp1 for zipping into df
-                    product_url= "https://www.amazon.in" + product['url']
-                    print(product_url)
-                    tmp3.append(product_url)
-                    tmp1.append(key)
+            data1 = scrape(url,time.time()) 
+            if data1 == None: print("None!")          
+            else:
+                if data1['products']!=None:
+                    productfeed=data1['products']
+                    for product in productfeed[:5]:
+                        # tmp3, tmp1 for zipping into df
+                        product_url= "https://www.amazon.in" + product['url']
+                        print(product_url)
+                        tmp3.append(product_url)
+                        tmp1.append(key)
         
     print(key,len(tmp1),len(tmp3))
 
     df = pd.DataFrame(list(zip(tmp1, tmp3)), 
-                   columns =['Followerid', 'product'])
+                columns =['Followerid', 'product'])
 
     followers = df["Followerid"].unique()
     products = df["product"].unique()
@@ -172,7 +170,8 @@ def finalData():
     return df,followers,products,tmp1
 
     # url = "https://www.amazon.in/s?k=Parasite"
-    # return HttpResponse(scrape(url)[1])     
+    # return HttpResponse(scrape(url)[1])         
+    
 
 ''' 
 functions computing co-occurence matrix, and the math needed for recommendations.
@@ -181,8 +180,7 @@ def set_occurences(follower, item , occurences):
     occurences[follower,item] += 1
     
 def co_occurences():
-    data_array = finalData()
-    df,followers,products,tmp1=data_array    
+    df,followers,products,tmp1 = finalData()
     occurences = lil_matrix((followers.shape[0], products.shape[0]), dtype='int8')
     print("164")
     df.apply(lambda row: set_occurences(row['followers'],row['products'],occurences), axis=1)
@@ -249,9 +247,10 @@ def final_calculations():
 '''
 Computing final results.
 '''
-def Results(request):
+def Results():
+    user_id = "prakhargupta"
     results,followers,tmp1,products = final_calculations()
-
+    
 # followers = [0,0,0,0,0,0,0,0,1,1,1,1,1,2,2.......]
 # products = [0,1,2,3,4,5,6,3,4,5,6,.................]
 
@@ -262,7 +261,7 @@ def Results(request):
         print(follower)
         dict = {}
         dict[str(0)] = str(products[i])
-        for j in range(1,31):
+        for j in range(1,10):
             print(j)
             dict[str(j)]= str(products[result[j]])  
 
@@ -270,9 +269,9 @@ def Results(request):
 
         store.collection("recommendations").document(follower).set(dict)
 
-    now = datetime.datetime.now()
-    html = "<html><body>It is now %s,and the function is successfully deployed!!</body></html>" % now
-    return HttpResponse(html)
+    # now = datetime.datetime.now()
+    # html = "<html><body>It is now %s,and the function is successfully deployed!!</body></html>" % now
+    # return HttpResponse(html)
 
 
 def scrapper(request):

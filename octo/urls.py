@@ -5,7 +5,9 @@ from django.conf import settings
 from scripts import views
 
 urlpatterns = [
-    path('', views.calculate_recommendations, name='home'),
+
+    path('', views.Results, name='home'),
+
     path('scripts/',include('scripts.urls'))
 ]
 if settings.DEBUG:

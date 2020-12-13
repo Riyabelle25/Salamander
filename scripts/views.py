@@ -8,7 +8,7 @@ import json
 import numpy as np
 from scipy.sparse import csr_matrix
 from .forms import newUserRegistration
-from scipy.sparse import csr_matrix,lil_matrix
+from scipy.sparse import csr_matrix, lil_matrix
 from ebaysdk.finding import Connection as finding
 from bs4 import BeautifulSoup
 import asyncio
@@ -29,11 +29,11 @@ from urllib.request import urlopen
 from urllib.request import Request
 import datetime
 from webdriver_manager.chrome import ChromeDriverManager
-
+import requests
 
 from selectorlib import Extractor
-import requests 
-import json 
+import requests
+import json
 from time import sleep
 from scripts import fingerprint
 from firebase_admin import credentials, firestore
@@ -43,8 +43,10 @@ app = firebase_admin.initialize_app(credz)
 
 store = firestore.client()
 
-#SCRAPE THE PRODUCT DATA
-def scrape(url):  
+# SCRAPE THE PRODUCT DATA
+
+
+def scrape(url):
     # Create an Extractor by reading from the YAML file
     e = Extractor.from_yaml_file('scripts/search_results.yml')
 
@@ -62,18 +64,21 @@ def scrape(url):
     }
 
     # Download the page using requests
-    print("Downloading %s"%url)
+    print("Downloading %s" % url)
     r = requests.get(url, headers=headers)
     # Simple check to check if page was blocked (Usually 503)
     if r.status_code > 500:
         if "To discuss automated access to Amazon data please contact" in r.text:
-            print("Page %s was blocked by Amazon. Please try using better proxies\n"%url)
+            print(
+                "Page %s was blocked by Amazon. Please try using better proxies\n" % url)
         else:
-            print("Page %s must have been blocked by Amazon as the status code was %d"%(url,r.status_code))
+            print("Page %s must have been blocked by Amazon as the status code was %d" % (
+                url, r.status_code))
         print(r.status_code)
         return None
     # Pass the HTML of the page and create
     return e.extract(r.text), r.text
+
 
 '''Function to get data from firestore collection.
     collection = "users/{userid}/followers/{followerid}/followedHashtags"
@@ -82,6 +87,7 @@ Args:
 Returns:
     data : dictionary of {follower_id -> hashtagList} 
 '''
+
 
 def getCollectionData(userid):
     col_ref = store.collection("users/"+userid+"/following")
@@ -95,16 +101,16 @@ def getCollectionData(userid):
         for follower in followers:
             print(follower.id)
             current_path = "users/" + userid + "/following/" + follower.id
-            print(current_path) 
-            print(follower.to_dict()) 
-            if follower.to_dict()['recommendations']!=None:
+            print(current_path)
+            print(follower.to_dict())
+            if follower.to_dict()['recommendations'] != None:
                 data[follower.id] = follower.to_dict()['recommendations']
-                print(data) 
-            # hashtags = store.collection(tmp).get()    
-            # for hashtag in hashtags: 
+                print(data)
+            # hashtags = store.collection(tmp).get()
+            # for hashtag in hashtags:
             #     print("137")
             #     print(hashtag.id)
-            #     print(hashtag.to_dict()) 
+            #     print(hashtag.to_dict())
             #     if hashtag.to_dict()['recommendations']!=None:
             #         data[hashtag.id] = hashtag.to_dict()['recommendations']
             #         print(data)
@@ -113,15 +119,19 @@ def getCollectionData(userid):
 
     return data
 
+
 '''
 Convert list of hashtags to long string
 '''
-def listToString(s):      
-    # initialize an empty string 
-    str1 = " "     
-    # return string   
-    return (str1.join(s)) 
-          
+
+
+def listToString(s):
+    # initialize an empty string
+    str1 = " "
+    # return string
+    return (str1.join(s))
+
+
 '''Function to manipulate fetched data into desired dataframe.
 Args:
     none.
@@ -129,6 +139,8 @@ Returns:
     list: dataframe of followerid x hashtags, followers, hashtags
 
 '''
+
+
 def finalData():
 
     data = getCollectionData("prakhargupta")
@@ -137,71 +149,81 @@ def finalData():
     # "Riya":["MHA","Darkacademia","Brookyln99","Cupcakes","HarryPotter"],
     # }
     print(data)
-    tmp1= [] # tmp1 is storing followers [data ka key]
-    tmp3= [] # tmp3 is storing products ke urls
-    
+    tmp1 = []  # tmp1 is storing followers [data ka key]
+    tmp3 = []  # tmp3 is storing products ke urls
 
     for key in data:
 
-        hashtags=fingerprint.main(listToString(data[key]))
+        hashtags = fingerprint.main(listToString(data[key]))
         print(len(hashtags))
 
         for hashtag in hashtags[:10]:
             print(hashtag)
             url = "https://www.amazon.in/s?k=" + hashtag
             data1 = scrape(url)[0]
-    
-            if data1['products']!= None:
+
+            if data1['products'] != None:
                 for product in data1['products']:
 
                     # tmp3, tmp1 for zipping into df
-                    product_url= "https://www.amazon.in" + product['url']
+                    product_url = "https://www.amazon.in" + product['url']
                     print(product_url)
                     tmp3.append(product_url)
                     tmp1.append(key)
-        
-    print(key,len(tmp1),len(tmp3))
 
-    df = pd.DataFrame(list(zip(tmp1, tmp3)), 
-                   columns =['Followerid', 'product'])
+    print(key, len(tmp1), len(tmp3))
+
+    df = pd.DataFrame(list(zip(tmp1, tmp3)),
+                      columns=['Followerid', 'product'])
 
     followers = df["Followerid"].unique()
     products = df["product"].unique()
 
     # transitioning Followerid and products
-    df['followers'] = df['Followerid'].apply(lambda x : np.argwhere(followers == x)[0][0])
-    df['products'] = df['product'].apply(lambda x : np.argwhere(products == x)[0][0])
-    print(len(followers),len(products))
+    df['followers'] = df['Followerid'].apply(
+        lambda x: np.argwhere(followers == x)[0][0])
+    df['products'] = df['product'].apply(
+        lambda x: np.argwhere(products == x)[0][0])
+    print(len(followers), len(products))
     print(df.head(10))
-    return df,followers,products,tmp1
+    return df, followers, products, tmp1
 
     # url = "https://www.amazon.in/s?k=Parasite"
-    # return HttpResponse(scrape(url)[1])     
+    # return HttpResponse(scrape(url)[1])
+
 
 ''' 
 functions computing co-occurence matrix, and the math needed for recommendations.
 '''
-def set_occurences(follower, item , occurences):
-    occurences[follower,item] += 1
-    
+
+
+def set_occurences(follower, item, occurences):
+    occurences[follower, item] += 1
+
+
 def co_occurences():
     data_array = finalData()
-    df,followers,products,tmp1=data_array    
-    occurences = lil_matrix((followers.shape[0], products.shape[0]), dtype='int8')
+    df, followers, products, tmp1 = data_array
+    occurences = lil_matrix(
+        (followers.shape[0], products.shape[0]), dtype='int8')
     print("164")
-    df.apply(lambda row: set_occurences(row['followers'],row['products'],occurences), axis=1)
+    df.apply(lambda row: set_occurences(
+        row['followers'], row['products'], occurences), axis=1)
     print("167")
     cooc = occurences.transpose().dot(occurences)
     print("169")
     cooc.setdiag(0)
     print("171")
-    return cooc, followers , tmp1, products
+    return cooc, followers, tmp1, products
+
 
 def xLogX(x):
     return x * np.log(x) if x != 0 else 0.0
 
+
 def entropy(x1, x2=0, x3=0, x4=0):
     return xLogX(x1 + x2 + x3 + x4) - xLogX(x1) - xLogX(x2) - xLogX(x3) - xLogX(x4)
+
 
 def LLR(k11, k12, k21, k22):
     rowEntropy = entropy(k11 + k12, k21 + k22)
@@ -211,6 +233,7 @@ def LLR(k11, k12, k21, k22):
         return 0.0
     return 2.0 * (rowEntropy + columnEntropy - matrixEntropy)
 
+
 def rootLLR(k11, k12, k21, k22):
     llr = LLR(k11, k12, k21, k22)
     sqrt = np.sqrt(llr)
@@ -218,25 +241,29 @@ def rootLLR(k11, k12, k21, k22):
         sqrt = -sqrt
     return sqrt
 
+
 '''
 Using the above functions to compute result indices for each product
 '''
+
+
 def final_calculations():
-    co_occurence,followers,tmp1,products = co_occurences()
-    
+    co_occurence, followers, tmp1, products = co_occurences()
+
     row_sum = np.sum(co_occurence, axis=0).A.flatten()
     column_sum = np.sum(co_occurence, axis=1).A.flatten()
     total = np.sum(row_sum, axis=0)
-    pp_score = lil_matrix((co_occurence.shape[0], co_occurence.shape[1]), dtype='double')
-    print("205") #pp_score.tolil()
+    pp_score = lil_matrix(
+        (co_occurence.shape[0], co_occurence.shape[1]), dtype='double')
+    print("205")  # pp_score.tolil()
     cx = co_occurence.tocoo()
-    for i,j,v in zip(cx.row, cx.col, cx.data):
+    for i, j, v in zip(cx.row, cx.col, cx.data):
         if v != 0:
             k11 = v
             k12 = row_sum[i] - k11
             k21 = column_sum[j] - k11
             k22 = total - k11 - k12 - k21
-            pp_score[i,j] = rootLLR(k11, k12, k21, k22)
+            pp_score[i, j] = rootLLR(k11, k12, k21, k22)
 
     result = np.flip(np.sort(pp_score.A, axis=1), axis=1)
     result_indices = np.flip(np.argsort(pp_score.A, axis=1), axis=1)
@@ -244,17 +271,20 @@ def final_calculations():
     indicators = result[:, :50]
     indicators[indicators < minLLR] = 0.0
     indicators_indices = result_indices[:, :50]
-    max_indicator_indices = (indicators==0).argmax(axis=1)
+    max_indicator_indices = (indicators == 0).argmax(axis=1)
     max = max_indicator_indices.max()
     indicators = indicators[:, :max+1]
     indicators_indices = indicators_indices[:, :max+1]
-    return result_indices, followers , tmp1,products
+    return result_indices, followers, tmp1, products
+
 
 '''
 Computing final results.
 '''
+
+
 def Results(request):
-    results,followers,tmp1,products = final_calculations()
+    results, followers, tmp1, products = final_calculations()
 
 # followers = [0,0,0,0,0,0,0,0,1,1,1,1,1,2,2.......]
 # products = [0,1,2,3,4,5,6,3,4,5,6,.................]
@@ -266,9 +296,9 @@ def Results(request):
         print(follower)
         dict = {}
         dict[str(0)] = str(products[i])
-        for j in range(1,31):
+        for j in range(1, 31):
             print(j)
-            dict[str(j)]= str(products[result[j]])  
+            dict[str(j)] = str(products[result[j]])
 
     # {"0":"",}
 
@@ -279,7 +309,7 @@ def Results(request):
     return HttpResponse(html)
 
 
-def scrapper(userNamed,ps,target):
+def scrapper(userNamed, ps, target):
     count = 100  # number of profiles you want to scrap
     # User
     account = userNamed  # account from
@@ -403,7 +433,7 @@ def scrapper(userNamed,ps,target):
             print(x)
         except:
             continue
-        publicNo=0
+        publicNo = 0
         # 100 people of all 7 peeps
         for i in range(1, 100):
             try:
@@ -415,8 +445,8 @@ def scrapper(userNamed,ps,target):
                 list = text.encode('utf-8').split()
                 for ar in list:
                     if(str(ar) == 'b\'Verified\''):
-                        publicNo=publicNo+1
-                        if publicNo>10:
+                        publicNo = publicNo+1
+                        if publicNo > 10:
                             break
                         file_exists = os.path.isfile(csvfilename)
                         print('{};{}'.format(i, str(list[0]).split('\'')[1]))
@@ -433,7 +463,7 @@ def scrapper(userNamed,ps,target):
     flock = open("abc", 'w')
     for x in f:
         try:
-            if(x[0]=='*'):
+            if(x[0] == '*'):
                 flock.write(x)
                 continue
             link = "https://www.instagram.com/"+(x.split('\n')[0])+"/?__a=1"
@@ -456,7 +486,7 @@ def scrapper(userNamed,ps,target):
     f = open("abc", 'r')
     fhash = open("hash", 'w')
     for x in f:
-        if(x[0]=='*'):
+        if(x[0] == '*'):
             fhash.write(x)
             continue
         while x.find("#") != -1:
@@ -501,9 +531,10 @@ def scrapper(userNamed,ps,target):
                 username = x.split('*')[1]
             continue
         dataG.append(x.split('\n')[0])
-    #f.close()
+    # f.close()
     fhash.close()
     return ("st")
+
 
 def removeUnderscore(ref):
     tr = ""
@@ -512,34 +543,46 @@ def removeUnderscore(ref):
         if x.isalpha():
             tr += x
     return tr
+
+
 def home(request):
-    
+
     if request.method == 'POST':
         form = newUserRegistration(request.POST)
         if form.is_valid():
-            username=form.cleaned_data['username']
-            ps=form.cleaned_data['ps']
+            username = form.cleaned_data['username']
+            ps = form.cleaned_data['ps']
             target = form.cleaned_data['Target']
-            if username=='' or ps=='' or target=='':
-                return render(request,'scripts/home.html',{'form':form,'message':'Invalid Details'}) 
+            if username == '' or ps == '' or target == '':
+                return render(request, 'scripts/home.html', {'form': form, 'message': 'Invalid Details'})
             else:
-                scrapper(username,ps,target)  
-                return render(request,'scripts/home.html',{'form':form,})      
+                scrapper(username, ps, target)
+                return render(request, 'scripts/home.html', {'form': form, })
     else:
         form = newUserRegistration()
-        return render(request,'scripts/home.html',{'form':form,})
+        return render(request, 'scripts/home.html', {'form': form, })
 
-def getResults(request,target='prakhar__gupta__'):
+
+def getResults(request, target='prakhar__gupta__'):
     userid = removeUnderscore(target)
     col_ref = store.collection("recommendations").document(userid)
-    data = []
+    data = {}
+
+    counter = 0
     try:
-        print("131")
         followers = col_ref.get()
         if followers.exists:
             for x in followers.to_dict():
-                data.append(followers.to_dict()[x])
-            print(data)
+                r = requests.get(
+                    url="https://urlpreview.vercel.app/api/v1/preview?url="+str(followers.to_dict()[x]))
+                url_names = r.json()
+                if url_names['title'] == None:
+                    continue
+                data[followers.to_dict()[x]] = url_names['title']
+                print(url_names['title'])
+                counter += 1
+                if counter == 6:
+                    break
     except google.cloud.exceptions.NotFound:
         print('Missing data')
-    return HttpResponse(str(data))
+    return render(request, 'scripts/results.html', {'data': data})

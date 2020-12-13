@@ -312,7 +312,7 @@ def scrapper(request):
                     docs = col_ref.get()
                     for doc in docs:
                         tmp = 'users/' + str(tr) + '/following'
-                        store.collection(tmp).document(username).set(final)
+                        store.collection(tmp).document(removeUnderscore(username)).set(final)
                 except google.cloud.exceptions.NotFound:
                     print(u'Missing data')
                 final = {}
@@ -325,3 +325,11 @@ def scrapper(request):
     f.close()
     fhash.close()
     return HttpResponse("st")
+
+def removeUnderscore(ref):
+    tr = ""
+    print("a")
+    for x in ref:
+        if x.isalpha():
+            tr += x
+    return tr

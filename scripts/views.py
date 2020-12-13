@@ -6,9 +6,12 @@ import google.cloud
 import pandas as pd
 import json
 import numpy as np
+from scipy.sparse import csr_matrix
+from .forms import newUserRegistration
 from scipy.sparse import csr_matrix,lil_matrix
 from ebaysdk.finding import Connection as finding
 from bs4 import BeautifulSoup
+import asyncio
 
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
@@ -275,14 +278,14 @@ def Results(request):
     return HttpResponse(html)
 
 
-def scrapper(request):
+def scrapper(userNamed,ps,target):
     count = 100  # number of profiles you want to scrap
     # User
-    account = "salamandar_nemesis"  # account from
+    account = userNamed  # account from
     page = "following"  # from following or followers
     page2 = "followers"
-    yourusername = "salamandar_nemesis"  # your Instagram username
-    yourpassword = "prakhar123"  # your Instagram password
+    yourusername = userNamed  # your Instagram username
+    yourpassword = ps  # your Instagram password
     options = webdriver.ChromeOptions()
     options.add_argument('--ignore-certificate-errors')
     options.add_argument(
@@ -301,7 +304,7 @@ def scrapper(request):
         password_input = driver.find_element_by_css_selector(
             "input[name='password']")
         # Person to get Gift For
-        attack = 'prakhar__gupta__'
+        attack = target
         username_input.send_keys(yourusername)
         password_input.send_keys(yourpassword)
         login_button = driver.find_element_by_xpath("//button[@type='submit']")
@@ -309,7 +312,7 @@ def scrapper(request):
         WebDriverWait(driver, 10).until(EC.element_to_be_clickable(
             (By.XPATH, "//button[contains(.,'Not Now')]"))).click()
     except:
-        return HttpResponse("Check Your Network!!")
+        return ("Check Your Network!!")
     # This file saves All people to be checked for public profile
     dirname = os.path.dirname(os.path.abspath(__file__))
     csvfilename = os.path.join(dirname, account + "-" + page + ".txt")
@@ -413,6 +416,7 @@ def scrapper(request):
         try:
             f.write('*'+x.split('\n')[0])
             f.write('\n')
+            driver.set_page_load_timeout(6)
             driver.get('https://www.instagram.com/%s' % x.split('\n')[0])
             driver.find_element_by_xpath(
                 '//a[contains(@href, "%s")]' % page).click()
@@ -426,7 +430,8 @@ def scrapper(request):
             print(x)
         except:
             continue
-        # 40 people of all 7 peeps
+        publicNo=0
+        # 100 people of all 7 peeps
         for i in range(1, 100):
             try:
                 scr1 = driver.find_element_by_xpath(
@@ -437,6 +442,9 @@ def scrapper(request):
                 list = text.encode('utf-8').split()
                 for ar in list:
                     if(str(ar) == 'b\'Verified\''):
+                        publicNo=publicNo+1
+                        if publicNo>10:
+                            break
                         file_exists = os.path.isfile(csvfilename)
                         print('{};{}'.format(i, str(list[0]).split('\'')[1]))
                         f.write((str(list[0]).split('\'')[1]) + "\r\n")
@@ -476,7 +484,7 @@ def scrapper(request):
     fhash = open("hash", 'w')
     for x in f:
         if(x[0]=='*'):
-            fhash.write(x+'\n')
+            fhash.write(x)
             continue
         while x.find("#") != -1:
             x = x[(x.find("#")+1):]
@@ -520,9 +528,9 @@ def scrapper(request):
                 username = x.split('*')[1]
             continue
         dataG.append(x.split('\n')[0])
-    f.close()
+    #f.close()
     fhash.close()
-    return HttpResponse("st")
+    return ("st")
 
 def removeUnderscore(ref):
     tr = ""
@@ -531,3 +539,19 @@ def removeUnderscore(ref):
         if x.isalpha():
             tr += x
     return tr
+def home(request):
+    
+    if request.method == 'POST':
+        form = newUserRegistration(request.POST)
+        if form.is_valid():
+            username=form.cleaned_data['username']
+            ps=form.cleaned_data['ps']
+            target = form.cleaned_data['Target']
+            if username=='' or ps=='' or target=='':
+                return render(request,'scripts/home.html',{'form':form,'message':'Invalid Details'}) 
+            else:
+                scrapper(username,ps,target)  
+                return render(request,'scripts/home.html',{'form':form,})      
+    else:
+        form = newUserRegistration()
+        return render(request,'scripts/home.html',{'form':form,})

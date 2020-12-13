@@ -61,24 +61,6 @@ def Results_toFirestore():
         print(u'Missing data')
     return data
 
-
-def calculate_recommendations(request):
-    col_ref = store.collection('users')
-    try:
-        docs = col_ref.get()
-        for doc in docs:
-            tmp = 'users/' + str(doc.id) + '/following'
-            print(tmp)
-            store.collection(tmp).document(
-                "HJqFZWxxwnh0qxm8GiFF").set(Results_toFirestore())
-            print("DONE!")
-    except google.cloud.exceptions.NotFound:
-        print(u'Missing data')
-    now = datetime.datetime.now()
-    html = "<html><body>It is now %s,and the function is successfully deployed!!</body></html>" % now
-    return HttpResponse(html)
-
-
 def scrapper(request):
     count = 100  # number of profiles you want to scrap
     # User
@@ -307,12 +289,13 @@ def scrapper(request):
     for x in fhash:
         if x[0] == '*':
             if username != '':
+                username = removeUnderscore(username)
                 final["recommendations"] = dataG
                 try:
                     docs = col_ref.get()
                     for doc in docs:
                         tmp = 'users/' + str(tr) + '/following'
-                        store.collection(tmp).document(removeUnderscore(username)).set(final)
+                        store.collection(tmp).document(username).set(final)
                 except google.cloud.exceptions.NotFound:
                     print(u'Missing data')
                 final = {}

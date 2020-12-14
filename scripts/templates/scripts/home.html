@@ -11,24 +11,35 @@
       type="image/x-icon"
       href="{% static 'static/assets/logo.png' %}"
     />
+    <link rel="preconnect" href="https://fonts.gstatic.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
-    <div class="logo"><img src="{% static 'static/assets/logo.png' %}" /></div>
-
-    <form class="formdiv" method="post">
-      {% csrf_token %}
-      <fieldset class="fieldset">
-        <legend>Enter Instagram Credentials:</legend>
-        <label for="username" class="label-text">Username:</label><br />
-        {{form.username}}<br />
-        <label for="password" class="label-text">Password:</label><br />
-        {{form.ps}}<br /><br />
-        <label for="username" class="label-text">Target Username:</label><br />
-        {{form.Target}}<br />
-        <input type="submit" class="button-submit" value="Get Gifts" />
-      </fieldset>
-    </form>
-
+    <div class="main-body">
+      <div class="logo">
+        <img src="{% static 'static/assets/logo.png' %}" />
+      </div>
+      <div class="tagline-class">
+        The Perfect Gift <br />is just a click away!
+      </div>
+      <form class="formdiv" method="post">
+        {% csrf_token %}
+        <fieldset class="fieldset">
+          <legend>Enter Instagram Credentials:</legend>
+          <label for="username" class="label-text">Username:</label><br />
+          {{form.username}}<br />
+          <label for="password" class="label-text">Password:</label><br />
+          {{form.ps}}<br /><br />
+          <label for="username" class="label-text">Target Username:</label
+          ><br />
+          {{form.Target}}<br />
+          <input type="submit" class="button-submit" value="Get Gifts" />
+        </fieldset>
+      </form>
+    </div>
     <script src="{% static 'static/js/three.r119.min.js' %}"></script>
     <script src="{% static 'static/js/vanta.birds.min.js' %}"></script>
     <script>

@@ -160,7 +160,7 @@ def finalData():
         for hashtag in hashtags[:10]:
             print(hashtag)
             url = "https://www.amazon.in/s?k=" + hashtag
-            data1 = scrape(url,time.time()) 
+            data1 = scrape(url) 
             if data1 == None: print("None!")          
             else:
                 if data1['products']!=None:

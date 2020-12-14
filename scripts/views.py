@@ -164,6 +164,7 @@ def finalData(target):
             data1 = scrape(url)
             if data1 == None:
                 print("None!")
+
             else:
                 if data1['products'] != None:
                     productfeed = data1['products']

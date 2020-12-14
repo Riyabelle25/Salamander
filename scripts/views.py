@@ -140,7 +140,7 @@ Returns:
 
 
 def finalData():
-
+    
     data = getCollectionData("prakhargupta")
 
     # data = {"Nish":["MHA","Darkacademia","Knights","Poetry","Pups"],
@@ -148,32 +148,18 @@ def finalData():
     # "Riya":["MHA","Darkacademia","Brookyln99","Cupcakes","HarryPotter"],
     # }
     print(data)
-    tmp1 = []  # tmp1 is storing followers [data ka key]
-    tmp3 = []  # tmp3 is storing products ke urls
+    tmp1= [] # tmp1 is storing followers [data ka key]
+    tmp3= [] # tmp3 is storing products ke urls
+    
 
     for key in data:
 
-        hashtags = fingerprint.main(listToString(data[key]))
+        hashtags=fingerprint.main(listToString(data[key]))
         print(len(hashtags))
 
         for hashtag in hashtags[:10]:
             print(hashtag)
             url = "https://www.amazon.in/s?k=" + hashtag
-            data1 = scrape(url)[0]
-
-            if data1['products'] != None:
-                for product in data1['products']:
-
-                    # tmp3, tmp1 for zipping into df
-                    product_url = "https://www.amazon.in" + product['url']
-                    print(product_url)
-                    tmp3.append(product_url)
-                    tmp1.append(key)
-
-    print(key, len(tmp1), len(tmp3))
-
-    df = pd.DataFrame(list(zip(tmp1, tmp3)),
-                      columns=['Followerid', 'product'])
             data1 = scrape(url,time.time()) 
             if data1 == None: print("None!")          
             else:
@@ -195,16 +181,13 @@ def finalData():
     products = df["product"].unique()
 
     # transitioning Followerid and products
-    df['followers'] = df['Followerid'].apply(
-        lambda x: np.argwhere(followers == x)[0][0])
-    df['products'] = df['product'].apply(
-        lambda x: np.argwhere(products == x)[0][0])
-    print(len(followers), len(products))
+    df['followers'] = df['Followerid'].apply(lambda x : np.argwhere(followers == x)[0][0])
+    df['products'] = df['product'].apply(lambda x : np.argwhere(products == x)[0][0])
+    print(len(followers),len(products))
     print(df.head(10))
-    return df, followers, products, tmp1
+    return df,followers,products,tmp1
 
     # url = "https://www.amazon.in/s?k=Parasite"
-
     # return HttpResponse(scrape(url)[1])         
     
 

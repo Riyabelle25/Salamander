@@ -18,13 +18,14 @@ class ThreadingExample(object):
         """
         self.interval = interval
         # self.thread
-        thread = threading.Thread(target=views.Results, args=())
+
+                                     
+    def thread(self,request,username, ps, target,current_url):               
+        html = "It is now yayy time and the function is successfully deployed!!"
+        thread = threading.Thread(target=views.Results, args=(username, ps, target,current_url))
         thread.daemon = True                           
         thread.start()
-                                     
-    def thread(self,request):               
-        html = "<html><body>It is now yayy time and the function is successfully deployed!!</body></html>"
-        return HttpResponse(html)
+        return (html)
 
     def run(self):
         """ Method that runs forever """

@@ -3,5 +3,5 @@ from django.urls import path, include
 from . import views
 urlpatterns = [
     path('scrapper/',views.home , name='Scrapping Followers'),
-    path('getResults',views.getResults,name='Results'),
+    path('scrapper/getResults/',views.getResults,name='Results'),
 ]

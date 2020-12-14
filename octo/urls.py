@@ -5,13 +5,10 @@ from django.conf import settings
 from scripts import views
 from scripts import utils
 
-thread= utils.ThreadingExample()
 
 urlpatterns = [
-
-    path('', thread.thread, name='home'),
-
-    path('scripts/',include('scripts.urls'))
+    #path('go/', thread.thread, name='home'),
+    path('scripts/',include('scripts.urls')),
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

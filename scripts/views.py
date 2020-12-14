@@ -1,6 +1,7 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import HttpResponse
 import datetime
+import webbrowser
 import firebase_admin
 import google.cloud
 import pandas as pd
@@ -12,7 +13,8 @@ from scipy.sparse import csr_matrix, lil_matrix
 from ebaysdk.finding import Connection as finding
 from bs4 import BeautifulSoup
 import asyncio
-
+import threading
+from django.http import HttpResponseRedirect
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from time import sleep
@@ -46,8 +48,8 @@ store = firestore.client()
 user_id = ""
 
 
-#SCRAPE THE PRODUCT DATA
-def scrape(url):  
+# SCRAPE THE PRODUCT DATA
+def scrape(url):
 
     # Create an Extractor by reading from the YAML file
     e = Extractor.from_yaml_file('scripts/search_results.yml')
@@ -67,7 +69,7 @@ def scrape(url):
 
     # Download the page using requests
 
-    print("Downloading %s"%url)
+    print("Downloading %s" % url)
     r = requests.get(url, headers=headers, timeout=28)
     # Simple check to check if page was blocked (Usually 503)
     if r.status_code > 500:
@@ -80,9 +82,8 @@ def scrape(url):
         print(r.status_code)
         return None
 
-    # Pass the HTML of the page and create 
+    # Pass the HTML of the page and create
     return e.extract(r.text)
-
 
 
 '''Function to get data from firestore collection.
@@ -111,7 +112,7 @@ def getCollectionData(userid):
             print(follower.to_dict())
             if follower.to_dict()['recommendations'] != None:
                 data[follower.id] = follower.to_dict()['recommendations']
-                print(data) 
+                print(data)
 
     except google.cloud.exceptions.NotFound:
         print('Missing data')
@@ -123,13 +124,14 @@ def getCollectionData(userid):
 Convert list of hashtags to long string
 '''
 
-def listToString(s):      
-    # initialize an empty string 
-    str1 = " "     
-    # return string   
-    return (str1.join(s)) 
 
- 
+def listToString(s):
+    # initialize an empty string
+    str1 = " "
+    # return string
+    return (str1.join(s))
+
+
 '''Function to manipulate fetched data into desired dataframe.
 Args:
     none.
@@ -139,57 +141,60 @@ Returns:
 '''
 
 
-def finalData():
-    
-    data = getCollectionData("prakhargupta")
+def finalData(target):
+
+    data = getCollectionData(target)
 
     # data = {"Nish":["MHA","Darkacademia","Knights","Poetry","Pups"],
     # "Sarthak":["Disney","Brooklyn99","Pups","Babies","Poetry"],
     # "Riya":["MHA","Darkacademia","Brookyln99","Cupcakes","HarryPotter"],
     # }
-    print(data)
-    tmp1= [] # tmp1 is storing followers [data ka key]
-    tmp3= [] # tmp3 is storing products ke urls
-    
+    # print(data)
+    tmp1 = []  # tmp1 is storing followers [data ka key]
+    tmp3 = []  # tmp3 is storing products ke urls
 
     for key in data:
 
-        hashtags=fingerprint.main(listToString(data[key]))
+        hashtags = fingerprint.main(listToString(data[key]))
         print(len(hashtags))
 
         for hashtag in hashtags[:10]:
             print(hashtag)
             url = "https://www.amazon.in/s?k=" + hashtag
-            data1 = scrape(url) 
-            if data1 == None: print("None!")          
+            data1 = scrape(url)
+            if data1 == None:
+                print("None!")
+
             else:
-                if data1['products']!=None:
-                    productfeed=data1['products']
+                if data1['products'] != None:
+                    productfeed = data1['products']
                     for product in productfeed[:5]:
                         # tmp3, tmp1 for zipping into df
-                        product_url= "https://www.amazon.in" + product['url']
+                        product_url = "https://www.amazon.in" + product['url']
                         print(product_url)
                         tmp3.append(product_url)
                         tmp1.append(key)
-        
-    print(key,len(tmp1),len(tmp3))
 
-    df = pd.DataFrame(list(zip(tmp1, tmp3)), 
-                columns =['Followerid', 'product'])
+    # print(key,len(tmp1),len(tmp3))
+
+    df = pd.DataFrame(list(zip(tmp1, tmp3)),
+                      columns=['Followerid', 'product'])
 
     followers = df["Followerid"].unique()
     products = df["product"].unique()
 
     # transitioning Followerid and products
-    df['followers'] = df['Followerid'].apply(lambda x : np.argwhere(followers == x)[0][0])
-    df['products'] = df['product'].apply(lambda x : np.argwhere(products == x)[0][0])
-    print(len(followers),len(products))
-    print(df.head(10))
-    return df,followers,products,tmp1
+    df['followers'] = df['Followerid'].apply(
+        lambda x: np.argwhere(followers == x)[0][0])
+    df['products'] = df['product'].apply(
+        lambda x: np.argwhere(products == x)[0][0])
+    # print(len(followers),len(products))
+    # print(df.head(10))
+    return df, followers, products, tmp1
 
     # url = "https://www.amazon.in/s?k=Parasite"
-    # return HttpResponse(scrape(url)[1])         
-    
+    # return HttpResponse(scrape(url)[1])
+
 
 ''' 
 functions computing co-occurence matrix, and the math needed for recommendations.
@@ -200,10 +205,11 @@ def set_occurences(follower, item, occurences):
     occurences[follower, item] += 1
 
 
-def co_occurences():
+def co_occurences(target):
 
-    df,followers,products,tmp1 = finalData()
-    occurences = lil_matrix((followers.shape[0], products.shape[0]), dtype='int8')
+    df, followers, products, tmp1 = finalData(target)
+    occurences = lil_matrix(
+        (followers.shape[0], products.shape[0]), dtype='int8')
     print("164")
     df.apply(lambda row: set_occurences(
         row['followers'], row['products'], occurences), axis=1)
@@ -245,8 +251,8 @@ Using the above functions to compute result indices for each product
 '''
 
 
-def final_calculations():
-    co_occurence, followers, tmp1, products = co_occurences()
+def final_calculations(target):
+    co_occurence, followers, tmp1, products = co_occurences(target)
 
     row_sum = np.sum(co_occurence, axis=0).A.flatten()
     column_sum = np.sum(co_occurence, axis=1).A.flatten()
@@ -279,10 +285,13 @@ def final_calculations():
 '''
 Computing final results.
 '''
-def Results():
-    user_id = "prakhargupta"
-    results,followers,tmp1,products = final_calculations()
-    
+
+
+def Results(username, ps, target,current_url):
+    scrapper(username, ps, target)
+    user_id = removeUnderscore(target)
+    results, followers, tmp1, products = final_calculations(user_id)
+
 # followers = [0,0,0,0,0,0,0,0,1,1,1,1,1,2,2.......]
 # products = [0,1,2,3,4,5,6,3,4,5,6,.................]
 
@@ -293,18 +302,16 @@ def Results():
         print(follower)
         dict = {}
         dict[str(0)] = str(products[i])
-        for j in range(1,10):
+        for j in range(1, 10):
             print(j)
             dict[str(j)] = str(products[result[j]])
 
-    # {"0":"",}
+
 
         store.collection("recommendations").document(follower).set(dict)
-
-    # now = datetime.datetime.now()
-    # html = "<html><body>It is now %s,and the function is successfully deployed!!</body></html>" % now
-    # return HttpResponse(html)
-
+    print(current_url)
+    current_url+='getResults/'
+    webbrowser.open(current_url)  # Go to example.com
 
 def scrapper(userNamed, ps, target):
     count = 100  # number of profiles you want to scrap
@@ -359,7 +366,7 @@ def scrapper(userNamed, ps, target):
     f.write(('*'+attack))
     f.write('\n')
     # attack's 50 peeps
-    for i in range(1, 700):
+    for i in range(1, 400):
         try:
             scr1 = driver.find_element_by_xpath(
                 '/html/body/div[5]/div/div/div[2]/ul/div/li[%s]' % i)
@@ -392,7 +399,7 @@ def scrapper(userNamed, ps, target):
     print(text1)
     x = datetime.datetime.now()
     print(x)
-    # user's 7 peeps
+    # user's 9 peeps
     for i in range(1, 10):
         try:
             scr1 = driver.find_element_by_xpath(
@@ -432,7 +439,7 @@ def scrapper(userNamed, ps, target):
             continue
         publicNo = 0
         # 100 people of all 7 peeps
-        for i in range(1, 100):
+        for i in range(1, 70):
             try:
                 scr1 = driver.find_element_by_xpath(
                     '/html/body/div[5]/div/div/div[2]/ul/div/li[%s]' % i)
@@ -512,15 +519,18 @@ def scrapper(userNamed, ps, target):
         if x[0] == '*':
             if username != '':
                 username = removeUnderscore(username)
-
                 final["recommendations"] = dataG
                 try:
                     docs = col_ref.get()
                     for doc in docs:
                         tmp = 'users/' + str(tr) + '/following'
-                        store.collection(tmp).document(username).set(final)
+                        if username != '':
+                            store.collection(tmp).document(username).set(final)
+                        else:
+                            print('harrr')
                 except google.cloud.exceptions.NotFound:
                     print(u'Missing data')
+                    continue
                 final = {}
                 dataG.clear()
                 username = x.split('*')[1]
@@ -553,7 +563,11 @@ def home(request):
             if username == '' or ps == '' or target == '':
                 return render(request, 'scripts/home.html', {'form': form, 'message': 'Invalid Details'})
             else:
-                scrapper(username, ps, target)
+                thread = utils.ThreadingExample()
+                current_url = request.build_absolute_uri()
+                print(current_url)
+                print("aa")
+                thread.thread(request,username, ps, target,current_url)
                 return render(request, 'scripts/home.html', {'form': form, })
     else:
         form = newUserRegistration()

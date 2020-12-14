@@ -1,66 +1,69 @@
-*{
-    height:100%;
-    background-attachment: fixed;
-    background-size: cover;
-    background-repeat: no-repeat;
-    overflow-y: hidden;
+body {
+  height: auto;
+  min-height: 80vw;
+  background-attachment: fixed;
+  background-size: cover;
+  background-repeat: no-repeat;
+  overflow-x: hidden;
+  opacity: 10;
 }
 
-.logo{
-    height: 200px;
-    width: 200px;
-    margin-top: 0.5%;
-    margin: 1%;
-    position: absolute;
-    z-index: -20;
+.logo {
+  height: 100px;
+  width: 100px;
+  margin-top: 0.5%;
+  margin: 1%;
+  position: absolute;
+  z-index: -20;
 }
 
-.formdiv{
-    position: absolute;
-    top:25%;
-    right: 20%;
-    height: auto;
-    width: 350px;
-    background-color: transparent;
-    z-index: 100;
-    display: flex;
-    flex-wrap: wrap;
+.formdiv {
+  position: absolute;
+  top: 15%;
+  right: 20%;
+  height: auto;
+  width: 400px;
+  background-color: transparent;
+  z-index: 100;
+  display: flex;
+  flex-wrap: wrap;
 }
-form{
-    display: inline-block;
-    text-align: center;
+form {
+  display: inline-block;
+  text-align: center;
 }
-.fieldset{
-    color:#fac25c;
-    font-size:20px;
-    border-color: #fac25c;
-    font-weight: bold;
+.fieldset {
+  color: #fac25c;
+  font-size: 20px;
+  border-color: #fac25c;
+  font-weight: bold;
 }
-.label-text{
-    color:#fd557d;
-    font-size: 20px;
-    font-weight: bold;
+.label-text {
+  color: #fd557d;
+  font-size: 20px;
+  font-weight: bold;
 }
-.input-text{
-    height: 35px;
-    width:200px;
-    margin: 1%;
-    background-color:#fce49c;
-    border-color: #fb879d;
-    font-weight: bold;
-    border-width: 5px;
-    /* box-shadow:#fb879d; */
-    clip-path: polygon(10% 0, 100% 0, 100% 65%, 90% 100%, 0 100%, 0 33%);
+.input-text {
+  height: 35px;
+  width: 200px;
+  margin: 1%;
+  background-color: #fce49c;
+  border-color: #fb879d;
+  font-weight: bold;
+  border-width: 5px;
+  /* box-shadow:#fb879d; */
+  clip-path: polygon(10% 0, 100% 0, 100% 65%, 90% 100%, 0 100%, 0 33%);
 }
-.button-submit{
-    height:50px;
-    width: 200px;
-    clip-path: polygon(10% 0, 100% 0, 100% 65%, 90% 100%, 0 100%, 0 33%);
-    background-color: #ce4e6e;
-    color:#fac25c;
-    font-size: 25px;
+.button-submit {
+  height: 50px;
+  width: 200px;
+  clip-path: polygon(10% 0, 100% 0, 100% 65%, 90% 100%, 0 100%, 0 33%);
+  background-color: #ce4e6e;
+  color: #fac25c;
+  font-size: 25px;
+  margin-top: 4%;
 }
-.button-submit:hover{
-    cursor:pointer;
-    transform: scale(1.08);
+.button-submit:hover {
+  cursor: pointer;
+  transform: scale(1.08);
 }

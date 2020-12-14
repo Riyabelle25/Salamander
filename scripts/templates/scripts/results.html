@@ -5,7 +5,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gift Recommendation System</title>
-    <link rel="stylesheet" href="{% static 'static/styles.css' %}" />
+    <link rel="stylesheet" href="{% static 'static/results.css' %}" />
     <link
       rel="icon"
       type="image/x-icon"
@@ -14,21 +14,16 @@
   </head>
   <body>
     <div class="logo"><img src="{% static 'static/assets/logo.png' %}" /></div>
-
-    <form class="formdiv" method="post">
-      {% csrf_token %}
-      <fieldset class="fieldset">
-        <legend>Enter Instagram Credentials:</legend>
-        <label for="username" class="label-text">Username:</label><br />
-        {{form.username}}<br />
-        <label for="password" class="label-text">Password:</label><br />
-        {{form.ps}}<br /><br />
-        <label for="username" class="label-text">Target Username:</label><br />
-        {{form.Target}}<br />
-        <input type="submit" class="button-submit" value="Get Gifts" />
-      </fieldset>
-    </form>
-
+    <div class="title">Your Results</div>
+    <div class="results">
+      {% for key, value in data.items %}
+      <div class="itembox">
+        <div class="link">
+          <a href="{{ key }}" target="blank">{{ value }}</a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
     <script src="{% static 'static/js/three.r119.min.js' %}"></script>
     <script src="{% static 'static/js/vanta.birds.min.js' %}"></script>
     <script>

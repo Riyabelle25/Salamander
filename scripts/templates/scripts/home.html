@@ -18,6 +18,32 @@
     />
   </head>
   <body>
+    <script>
+      window.setInterval(function () {
+        var username = document.getElementById("target").value;
+        if (username != "") {
+          $.ajax({
+            url: "scripts/ajax/validate_username/",
+            data: {
+              username: username,
+            },
+            dataType: "json",
+            success: function (data) {
+              for (var ids in data) {
+                if (data[ids] == null) continue;
+                if (data[ids] == "1")
+                  document.getElementById(ids.toString()).innerHTML = "Done";
+                else if (data[ids] == "0")
+                  document.getElementById(ids.toString()).innerHTML = "Failed";
+                else
+                  document.getElementById(ids.toString()).innerHTML =
+                    "Processing";
+              }
+            },
+          });
+        }
+      }, 5000);
+    </script>
     <div class="main-body">
       <div class="logo">
         <img src="{% static 'static/assets/logo.png' %}" />
@@ -40,6 +66,18 @@
         </fieldset>
       </form>
     </div>
+    <div>
+      <p id="a1">Mark1</p>
+      <p id="a2">Mark2</p>
+      <p id="a3">Mark3</p>
+      <p id="a4"></p>
+      <p id="a5"></p>
+      <p id="a6"></p>
+      <p id="a7"></p>
+      <p id="a8"></p>
+      <p id="a9"></p>
+      <p id="a10"></p>
+    </div>
     <script src="{% static 'static/js/three.r119.min.js' %}"></script>
     <script src="{% static 'static/js/vanta.birds.min.js' %}"></script>
     <script>
@@ -55,5 +93,11 @@
         backgroundColor: "#3b2d4e",
       });
     </script>
+    <script
+      rel="javascript"
+      type="text/javascript"
+      href="js/jquery-1.11.3.min.js"
+    ></script>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
   </body>
 </html>

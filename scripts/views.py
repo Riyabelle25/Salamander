@@ -573,9 +573,6 @@ def home(request):
             username = form.cleaned_data['username']
             ps = form.cleaned_data['ps']
             target = form.cleaned_data['Target']
-            username='salamandar_nemesis'
-            ps='prakhar123'
-            target='prakhar__gupta__'
             if username == '' or ps == '' or target == '':
                 return render(request, 'scripts/home.html', {'form': form, 'message': 'Invalid Details'})
             else:

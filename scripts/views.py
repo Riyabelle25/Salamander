@@ -49,41 +49,59 @@ user_id = ""
 
 
 # SCRAPE THE PRODUCT DATA
-def scrape(url):
+def scrape(hashtag,key):
+    
+    tmp1= []
+    tmp3 = []
+    api = finding(appid = 'SarthakS-Salamand-PRD-8f78dd8ce-ef33d6b3', config_file=None)
+    api_request = { 'keywords': hashtag}
+    response = api.execute('findItemsByKeywords', api_request)
+    soup = BeautifulSoup(response.content,'lxml')
+    
+    if (soup.find('totalentries'))!= None:
+        print(int(soup.find('totalentries').text))
+        items = soup.find_all('viewitemurl')
 
-    # Create an Extractor by reading from the YAML file
-    e = Extractor.from_yaml_file('scripts/search_results.yml')
+        for item in items:
+            print("66",key,item.contents[0])
+            tmp3.append(item.contents[0])
+            tmp1.append(key)
 
-    headers = {
-        'dnt': '1',
-        'upgrade-insecure-requests': '1',
-        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Safari/537.36',
-        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
-        'sec-fetch-site': 'same-origin',
-        'sec-fetch-mode': 'navigate',
-        'sec-fetch-user': '?1',
-        'sec-fetch-dest': 'document',
-        'referer': 'https://www.amazon.in/',
-        'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
-    }
+    return tmp3, tmp1
 
-    # Download the page using requests
+ 
+# Create an Extractor by reading from the YAML file
+    # e = Extractor.from_yaml_file('scripts/search_results.yml')   
+    # headers = {
+    #     'dnt': '1',
+    #     'upgrade-insecure-requests': '1',
+    #     'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Safari/537.36',
+    #     'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+    #     'sec-fetch-site': 'same-origin',
+    #     'sec-fetch-mode': 'navigate',
+    #     'sec-fetch-user': '?1',
+    #     'sec-fetch-dest': 'document',
+    #     'referer': 'https://www.amazon.in/',
+    #     'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
+    # }
 
-    print("Downloading %s" % url)
-    r = requests.get(url, headers=headers, timeout=28)
-    # Simple check to check if page was blocked (Usually 503)
-    if r.status_code > 500:
-        if "To discuss automated access to Amazon data please contact" in r.text:
-            print(
-                "Page %s was blocked by Amazon. Please try using better proxies\n" % url)
-        else:
-            print("Page %s must have been blocked by Amazon as the status code was %d" % (
-                url, r.status_code))
-        print(r.status_code)
-        return None
+    # # Download the page using requests
 
-    # Pass the HTML of the page and create
-    return e.extract(r.text)
+    # print("Downloading %s" % url)
+    # r = requests.get(url, headers=headers, timeout=28)
+    # # Simple check to check if page was blocked (Usually 503)
+    # if r.status_code > 500:
+    #     if "To discuss automated access to Amazon data please contact" in r.text:
+    #         print(
+    #             "Page %s was blocked by Amazon. Please try using better proxies\n" % url)
+    #     else:
+    #         print("Page %s must have been blocked by Amazon as the status code was %d" % (
+    #             url, r.status_code))
+    #     print(r.status_code)
+    #     return None
+
+    # Pass the HTML of the page and create HttpResponse(items[0])
+    
 
 
 '''Function to get data from firestore collection.
@@ -156,27 +174,30 @@ def finalData(target):
     for key in data:
 
         hashtags = fingerprint.main(listToString(data[key]))
-        print(len(hashtags))
+        print("177",len(hashtags))
 
         for hashtag in hashtags[:10]:
             print(hashtag)
-            url = "https://www.amazon.in/s?k=" + hashtag
-            data1 = scrape(url)
-            if data1 == None:
-                print("None!")
+            # url = "https://www.amazon.in/s?k=" + hashtag
+            data1 = scrape(hashtag,key)
+            tmp3+= data1[0]
+            tmp1+=data1[1]
 
-            else:
-                if data1['products'] != None:
-                    productfeed = data1['products']
-                    for product in productfeed[:5]:
-                        # tmp3, tmp1 for zipping into df
-                        product_url = "https://www.amazon.in" + product['url']
-                        print(product_url)
-                        tmp3.append(product_url)
-                        tmp1.append(key)
+            # if data1 == None:
+            #     print("None!")
+            # else:
+            #     if data1['products'] != None:
+            #         productfeed = data1['products']
+            #         for product in productfeed[:5]:
+            #             # tmp3, tmp1 for zipping into df
+            #             product_url = "https://www.amazon.in" + product['url']
+            #             print(product_url)
+            #             tmp3.append(product_url)
+            #             tmp1.append(key)
 
     # print(key,len(tmp1),len(tmp3))
-
+    
+    print(tmp1,tmp3)
     df = pd.DataFrame(list(zip(tmp1, tmp3)),
                       columns=['Followerid', 'product'])
 
@@ -298,15 +319,14 @@ def Results(username, ps, target,current_url):
     for i in range(len(results)):
         print(len(results))
         follower = tmp1[i]
+        print(i)
         result = results[i]
         print(follower)
-        dict = {}
+        dict = {}                                   
         dict[str(0)] = str(products[i])
         for j in range(1, 10):
             print(j)
             dict[str(j)] = str(products[result[j]])
-
-
 
         store.collection("recommendations").document(follower).set(dict)
     print(current_url)

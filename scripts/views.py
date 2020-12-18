@@ -47,10 +47,8 @@ app = firebase_admin.initialize_app(credz)
 store = firestore.client()
 user_id = ""
 
-
-# SCRAPE THE PRODUCT DATA
-def scrape(hashtag,key):
-    
+# GET items from EBAY-API
+def ebayAPI(hashtag,key):
     tmp1= []
     tmp3 = []
     api = finding(appid = 'SarthakS-Salamand-PRD-8f78dd8ce-ef33d6b3', config_file=None)
@@ -62,43 +60,62 @@ def scrape(hashtag,key):
         print(int(soup.find('totalentries').text))
         items = soup.find_all('viewitemurl')
 
-        for item in items:
+        for item in items[:1]:
             print("66",key,item.contents[0])
             tmp3.append(item.contents[0])
             tmp1.append(key)
 
     return tmp3, tmp1
 
- 
-# Create an Extractor by reading from the YAML file
-    # e = Extractor.from_yaml_file('scripts/search_results.yml')   
-    # headers = {
-    #     'dnt': '1',
-    #     'upgrade-insecure-requests': '1',
-    #     'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Safari/537.36',
-    #     'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
-    #     'sec-fetch-site': 'same-origin',
-    #     'sec-fetch-mode': 'navigate',
-    #     'sec-fetch-user': '?1',
-    #     'sec-fetch-dest': 'document',
-    #     'referer': 'https://www.amazon.in/',
-    #     'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
-    # }
+# SCRAPE THE PRODUCT DATA
+def scrape(hashtag,key):
+    tmp1 = []
+    tmp3 = []
 
-    # # Download the page using requests
+    # Create an Extractor by reading from the YAML file
+    e = Extractor.from_yaml_file('scripts/search_results.yml')   
+    headers = {
+        'dnt': '1',
+        'upgrade-insecure-requests': '1',
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Safari/537.36',
+        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+        'sec-fetch-site': 'same-origin',
+        'sec-fetch-mode': 'navigate',
+        'sec-fetch-user': '?1',
+        'sec-fetch-dest': 'document',
+        'referer': 'https://www.amazon.in/',
+        'accept-language': 'en-GB,en-US;q=0.9,en;q=0.8',
+    }
 
-    # print("Downloading %s" % url)
-    # r = requests.get(url, headers=headers, timeout=28)
-    # # Simple check to check if page was blocked (Usually 503)
-    # if r.status_code > 500:
-    #     if "To discuss automated access to Amazon data please contact" in r.text:
-    #         print(
-    #             "Page %s was blocked by Amazon. Please try using better proxies\n" % url)
-    #     else:
-    #         print("Page %s must have been blocked by Amazon as the status code was %d" % (
-    #             url, r.status_code))
-    #     print(r.status_code)
-    #     return None
+    # Download the page using requests
+    url = "https://www.amazon.in/s?k=" + hashtag
+    print("Downloading %s" % url)
+    r = requests.get(url, headers=headers, timeout=28)
+    # Simple check to check if page was blocked (Usually 503)
+    if r.status_code > 500:
+        if "To discuss automated access to Amazon data please contact" in r.text:
+            print(
+                "Page %s was blocked by Amazon. Please try using better proxies\n" % url)
+        else:
+            print("Page %s must have been blocked by Amazon as the status code was %d" % (
+                url, r.status_code))
+        print(r.status_code)
+        return None
+
+    if e.extract(r.text) == None:
+        print("None!")
+
+    else:
+        if e.extract(r.text)['products'] != None:
+            productfeed = e.extract(r.text)['products']
+
+            for product in productfeed[:5]:
+                # tmp3, tmp1 for zipping into df
+                product_url = "https://www.amazon.in" + product['url']
+                print(product_url)
+                tmp3.append(product_url)
+                tmp1.append(key)
+    return tmp1,tmp3
 
     # Pass the HTML of the page and create HttpResponse(items[0])
     
@@ -111,8 +128,6 @@ Args:
 Returns:
     data : dictionary of {follower_id -> hashtagList} 
 '''
-
-
 def getCollectionData(userid):
     col_ref = store.collection("users/"+userid+"/following")
     print(userid)
@@ -141,8 +156,6 @@ def getCollectionData(userid):
 '''
 Convert list of hashtags to long string
 '''
-
-
 def listToString(s):
     # initialize an empty string
     str1 = " "
@@ -155,10 +168,7 @@ Args:
     none.
 Returns:
     list: dataframe of followerid x hashtags, followers, hashtags
-
 '''
-
-
 def finalData(target):
 
     data = getCollectionData(target)
@@ -171,34 +181,22 @@ def finalData(target):
     tmp1 = []  # tmp1 is storing followers [data ka key]
     tmp3 = []  # tmp3 is storing products ke urls
 
+# key means each person
     for key in data:
-
+# clustering hashtags
         hashtags = fingerprint.main(listToString(data[key]))
         print("177",len(hashtags))
 
         for hashtag in hashtags[:10]:
-            print(hashtag)
-            # url = "https://www.amazon.in/s?k=" + hashtag
-            data1 = scrape(hashtag,key)
+            print(hashtag)            
+            data1 = ebayAPI(hashtag,key)
             tmp3+= data1[0]
             tmp1+=data1[1]
-
-            # if data1 == None:
-            #     print("None!")
-            # else:
-            #     if data1['products'] != None:
-            #         productfeed = data1['products']
-            #         for product in productfeed[:5]:
-            #             # tmp3, tmp1 for zipping into df
-            #             product_url = "https://www.amazon.in" + product['url']
-            #             print(product_url)
-            #             tmp3.append(product_url)
-            #             tmp1.append(key)
-
+        
     # print(key,len(tmp1),len(tmp3))
     
     print(tmp1,tmp3)
-    df = pd.DataFrame(list(zip(tmp1, tmp3)),
+    df = pd.DataFrame(list(zip(tmp1,tmp3)),
                       columns=['Followerid', 'product'])
 
     followers = df["Followerid"].unique()
@@ -209,8 +207,9 @@ def finalData(target):
         lambda x: np.argwhere(followers == x)[0][0])
     df['products'] = df['product'].apply(
         lambda x: np.argwhere(products == x)[0][0])
-    # print(len(followers),len(products))
-    # print(df.head(10))
+    print(len(followers),len(products))
+    print(df.head(10))
+
     return df, followers, products, tmp1
 
     # url = "https://www.amazon.in/s?k=Parasite"
@@ -220,7 +219,6 @@ def finalData(target):
 ''' 
 functions computing co-occurence matrix, and the math needed for recommendations.
 '''
-
 
 def set_occurences(follower, item, occurences):
     occurences[follower, item] += 1
@@ -306,8 +304,6 @@ def final_calculations(target):
 '''
 Computing final results.
 '''
-
-
 def Results(username, ps, target,current_url):
     scrapper(username, ps, target)
     user_id = removeUnderscore(target)
@@ -324,13 +320,13 @@ def Results(username, ps, target,current_url):
         print(follower)
         dict = {}                                   
         dict[str(0)] = str(products[i])
-        for j in range(1, 10):
+        for j in range(1, 40):
             print(j)
             dict[str(j)] = str(products[result[j]])
 
         store.collection("recommendations").document(follower).set(dict)
     print(current_url)
-    current_url+='getResults/'
+    current_url+= 'getResults/'
     webbrowser.open(current_url)  # Go to example.com
 
 def scrapper(userNamed, ps, target):

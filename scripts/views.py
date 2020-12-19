@@ -5,9 +5,9 @@ import webbrowser
 import firebase_admin
 import google.cloud
 import pandas as pd
-from django.http import JsonResponse
 import json
 import numpy as np
+import environ
 from scipy.sparse import csr_matrix
 from .forms import newUserRegistration
 from scipy.sparse import csr_matrix, lil_matrix
@@ -48,7 +48,8 @@ app = firebase_admin.initialize_app(credz)
 store = firestore.client()
 user_id = ""
 
-
+env = environ.Env()
+environ.Env.read_env()
 # SCRAPE THE PRODUCT DATA
 def scrape(url):
 
@@ -113,7 +114,7 @@ def getCollectionData(userid):
             print(follower.to_dict())
             if follower.to_dict()['recommendations'] != None:
                 data[follower.id] = follower.to_dict()['recommendations']
-                #print(data)
+                print(data)
 
     except google.cloud.exceptions.NotFound:
         print('Missing data')
@@ -143,7 +144,7 @@ Returns:
 
 
 def finalData(target):
-    updateStatus(target,'a7','1')
+
     data = getCollectionData(target)
 
     # data = {"Nish":["MHA","Darkacademia","Knights","Poetry","Pups"],
@@ -155,30 +156,25 @@ def finalData(target):
     tmp3 = []  # tmp3 is storing products ke urls
 
     for key in data:
-        try:
-            hashtags = fingerprint.main(listToString(data[key]))
-            print(len(hashtags))
 
-            for hashtag in hashtags[:10]:
-                try:
-                    print(hashtag)
-                    url = "https://www.amazon.in/s?k=" + hashtag
-                    data1 = scrape(url)
-                    if data1 == None:
-                        print("None!")
-                    else:
-                        if data1['products'] != None:
-                            productfeed = data1['products']
-                            for product in productfeed[:5]:
-                                # tmp3, tmp1 for zipping into df
-                                product_url = "https://www.amazon.in" + product['url']
-                                print(product_url)
-                                tmp3.append(product_url)
-                                tmp1.append(key)
-                except:
-                    continue
-        except:
-            continue
+        hashtags = fingerprint.main(listToString(data[key]))
+        print(len(hashtags))
+
+        for hashtag in hashtags[:10]:
+            print(hashtag)
+            url = "https://www.amazon.in/s?k=" + hashtag
+            data1 = scrape(url)
+            if data1 == None:
+                print("None!")
+            else:
+                if data1['products'] != None:
+                    productfeed = data1['products']
+                    for product in productfeed[:5]:
+                        # tmp3, tmp1 for zipping into df
+                        product_url = "https://www.amazon.in" + product['url']
+                        print(product_url)
+                        tmp3.append(product_url)
+                        tmp1.append(key)
 
     # print(key,len(tmp1),len(tmp3))
 
@@ -195,7 +191,6 @@ def finalData(target):
         lambda x: np.argwhere(products == x)[0][0])
     # print(len(followers),len(products))
     # print(df.head(10))
-    updateStatus(target,'a8','1')
     return df, followers, products, tmp1
 
     # url = "https://www.amazon.in/s?k=Parasite"
@@ -258,8 +253,8 @@ Using the above functions to compute result indices for each product
 
 
 def final_calculations(target):
-    updateStatus(target,'a6','1')
     co_occurence, followers, tmp1, products = co_occurences(target)
+
     row_sum = np.sum(co_occurence, axis=0).A.flatten()
     column_sum = np.sum(co_occurence, axis=1).A.flatten()
     total = np.sum(row_sum, axis=0)
@@ -285,7 +280,6 @@ def final_calculations(target):
     max = max_indicator_indices.max()
     indicators = indicators[:, :max+1]
     indicators_indices = indicators_indices[:, :max+1]
-    updateStatus(target,'a9','1')
     return result_indices, followers, tmp1, products
 
 
@@ -297,7 +291,6 @@ Computing final results.
 def Results(username, ps, target,current_url):
     scrapper(username, ps, target)
     user_id = removeUnderscore(target)
-    updateStatus(user_id,'a2','1')
     results, followers, tmp1, products = final_calculations(user_id)
 
 # followers = [0,0,0,0,0,0,0,0,1,1,1,1,1,2,2.......]
@@ -313,17 +306,15 @@ def Results(username, ps, target,current_url):
         for j in range(1, 10):
             print(j)
             dict[str(j)] = str(products[result[j]])
-        
+
+
+
         store.collection("recommendations").document(follower).set(dict)
     print(current_url)
-    thread2 = utils.updateClass()
-    thread2.thread(target, 'a10', '1')
-    current_url+=('getResults/'+target)
+    current_url+='getResults/'
     webbrowser.open(current_url)  # Go to example.com
 
 def scrapper(userNamed, ps, target):
-    targetShort = removeUnderscore(target)
-    updateStatus(targetShort,'a3','1')
     count = 100  # number of profiles you want to scrap
     # User
     account = userNamed  # account from
@@ -332,13 +323,30 @@ def scrapper(userNamed, ps, target):
     yourusername = userNamed  # your Instagram username
     yourpassword = ps  # your Instagram password
     options = webdriver.ChromeOptions()
-    options.add_argument('--ignore-certificate-errors')
-    options.add_argument(
-        '--user-agent="Mozilla/5.0 (iPhone; CPU iPhone OS 12_1_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/16D57"')
-    try:
-        driver = webdriver.Chrome(executable_path='./scripts/chromedriver')
-    except:
-        driver = webdriver.Chrome(executable_path='./scripts/chromedriver.exe')
+    if(env('is_heroku')=='true'):
+        options.add_argument('--headless');
+        options.add_argument('--disable-gpu')
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+        options.add_argument('--ignore-certificate-errors')
+        options.add_argument(
+            '--user-agent="Mozilla/5.0 (iPhone; CPU iPhone OS 12_1_4 like Mac OS X) (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.66 Safari/537.36"')
+        try:
+            options.binary_location = os.environ.get('GOOGLE_CHROME_BIN','/app/.apt/usr/bin/google-chrome')
+        except:
+            pass
+        try:
+            driver = webdriver.Chrome(executable_path='/app/.chromedriver/bin/chromedriver',chrome_options=options)
+        except:
+            driver = webdriver.Chrome(executable_path='./scripts/chromedriver',chrome_options=options)
+    else:
+        options.add_argument('--ignore-certificate-errors')
+        options.add_argument(
+            '--user-agent="Mozilla/5.0 (iPhone; CPU iPhone OS 12_1_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/16D57"')
+        try:
+            driver = webdriver.Chrome(executable_path='./scripts/chromedriver')
+        except:
+            driver = webdriver.Chrome(executable_path='./scripts/chromedriver.exe')
     # Go to login page
     driver.get('https://www.instagram.com/accounts/login/')
     # needed
@@ -376,7 +384,7 @@ def scrapper(userNamed, ps, target):
     f.write(('*'+attack))
     f.write('\n')
     # attack's 50 peeps
-    for i in range(1, 400):
+    for i in range(1, 320):
         try:
             scr1 = driver.find_element_by_xpath(
                 '/html/body/div[5]/div/div/div[2]/ul/div/li[%s]' % i)
@@ -398,7 +406,11 @@ def scrapper(userNamed, ps, target):
     # user
     # following
     faccount = open("account", 'w')
-    driver.get('https://www.instagram.com/%s' % account)
+    try:
+        driver.set_page_load_timeout(12)
+        driver.get('https://www.instagram.com/%s' % account)
+    except:
+        driver.get('https://www.instagram.com/%s' % account)        
     sleep(2)
     driver.find_element_by_xpath('//a[contains(@href, "%s")]' % page).click()
     scr2 = driver.find_element_by_xpath(
@@ -426,14 +438,14 @@ def scrapper(userNamed, ps, target):
         if i == (count-1):
             print(x)
     faccount.close()
-    updateStatus(targetShort,'a4','1')
+
     #
     faccount = open("account", 'r')
     for x in faccount:
         try:
             f.write('*'+x.split('\n')[0])
             f.write('\n')
-            driver.set_page_load_timeout(6)
+            driver.set_page_load_timeout(12)
             driver.get('https://www.instagram.com/%s' % x.split('\n')[0])
             driver.find_element_by_xpath(
                 '//a[contains(@href, "%s")]' % page).click()
@@ -451,7 +463,6 @@ def scrapper(userNamed, ps, target):
         # 100 people of all 7 peeps
         for i in range(1, 70):
             try:
-                driver.set_page_load_timeout(6)
                 scr1 = driver.find_element_by_xpath(
                     '/html/body/div[5]/div/div/div[2]/ul/div/li[%s]' % i)
                 driver.execute_script("arguments[0].scrollIntoView();", scr1)
@@ -481,7 +492,6 @@ def scrapper(userNamed, ps, target):
             if(x[0] == '*'):
                 flock.write(x)
                 continue
-            driver.set_page_load_timeout(6)
             link = "https://www.instagram.com/"+(x.split('\n')[0])+"/?__a=1"
             print(link)
             req = Request(
@@ -552,7 +562,6 @@ def scrapper(userNamed, ps, target):
         dataG.append(x.split('\n')[0])
     # f.close()
     fhash.close()
-    updateStatus(targetShort,'a5','1')
     return ("st")
 
 
@@ -573,9 +582,6 @@ def home(request):
             username = form.cleaned_data['username']
             ps = form.cleaned_data['ps']
             target = form.cleaned_data['Target']
-            username='salamandar_nemesis'
-            ps='prakhar123'
-            target='prakhar__gupta__'
             if username == '' or ps == '' or target == '':
                 return render(request, 'scripts/home.html', {'form': form, 'message': 'Invalid Details'})
             else:
@@ -583,19 +589,6 @@ def home(request):
                 current_url = request.build_absolute_uri()
                 print(current_url)
                 print("aa")
-                uid=removeUnderscore(target)
-                print(uid)
-                thread3 = utils.updateClass()
-                thread3.thread(uid, 'a10', '2')
-                updateStatus(uid,'a1','1')
-                updateStatus(uid,'a2','2')
-                updateStatus(uid,'a3','2')
-                updateStatus(uid,'a4','2')
-                updateStatus(uid,'a5','2')
-                updateStatus(uid,'a6','2')
-                updateStatus(uid,'a7','2')
-                updateStatus(uid,'a8','2')
-                updateStatus(uid,'a9','2')
                 thread.thread(request,username, ps, target,current_url)
                 return render(request, 'scripts/home.html', {'form': form, })
     else:

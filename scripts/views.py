@@ -131,10 +131,11 @@ def amazonScrape(hashtag,key):
             print("Page %s must have been blocked by Amazon as the status code was %d" % (
                 url, r.status_code))
         print(r.status_code)
-        return None
+        return tmp1,tmp3
 
     if e.extract(r.text) == None:
         print("None!")
+        return tmp1,tmp3
 
     else:
         if e.extract(r.text)['products'] != None:

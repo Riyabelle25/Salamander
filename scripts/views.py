@@ -55,56 +55,60 @@ environ.Env.read_env()
 
 
 # GET items from EBAY-API
-def ebayAPI(hashtag,key,min=10,max=50):
-    tmp1= []
+def ebayAPI(hashtag, key, min=10, max=50):
+    tmp1 = []
     tmp3 = []
-    api = finding(appid = 'SarthakS-Salamand-PRD-8f78dd8ce-ef33d6b3', config_file=None)
-    api_request = { 'keywords': hashtag,'itemFilter': [               
-                # {'name': 'LocatedIn',
-                #  'value': 'IN'},
-                #  {'name':'Currency',
-                #  'value':'INR'},
-                 {'name': 'BestOfferOnly',
-                 'value': 1},
-                #  {'name':'FeaturedOnly',
-                #  'value': 1},
-                 {'name':'HideDuplicateItems',
-                 'value': 1},
-                 {'name':'MaxPrice',
-                 'value':'50.00'
-                #  'paramName':'Currency',
-                #  'paramValue':'INR'
-                 },
-                 {'name':'MinPrice',
-                 'value':'10.00'}
-                #  'paramName':'Currency',
-                #  'paramValue':'INR'
-                #  }
-                 ],
-                 'SortOrderType':'PricePlusShippingLowest'}
+    api = finding(
+        appid='SarthakS-Salamand-PRD-8f78dd8ce-ef33d6b3', config_file=None)
+    api_request = {'keywords': hashtag, 'itemFilter': [
+        # {'name': 'LocatedIn',
+        #  'value': 'IN'},
+        #  {'name':'Currency',
+        #  'value':'INR'},
+        {'name': 'BestOfferOnly',
+         'value': 1},
+        #  {'name':'FeaturedOnly',
+        #  'value': 1},
+        {'name': 'HideDuplicateItems',
+         'value': 1},
+        {'name': 'MaxPrice',
+         'value': '50.00'
+                  #  'paramName':'Currency',
+                  #  'paramValue':'INR'
+         },
+        {'name': 'MinPrice',
+         'value': '10.00'}
+        #  'paramName':'Currency',
+        #  'paramValue':'INR'
+        #  }
+    ],
+        'SortOrderType': 'PricePlusShippingLowest'}
     response = api.execute('findItemsByKeywords', api_request)
-    soup = BeautifulSoup(response.content,'lxml')
-    
-    if (soup.find('totalentries'))!= None:
-        print("total enteries for:",hashtag, int(soup.find('totalentries').text))
+    soup = BeautifulSoup(response.content, 'lxml')
+
+    if (soup.find('totalentries')) != None:
+        print("total enteries for:", hashtag,
+              int(soup.find('totalentries').text))
         items = soup.find_all('viewitemurl')
-        
-        if len(items)>=2:
+
+        if len(items) >= 2:
             for item in items[:2]:
-                print(key,item.contents[0])
+                print(key, item.contents[0])
                 tmp3.append(item.contents[0])
                 tmp1.append(key)
-    print("size of tmp3",len(tmp3))
-    print("size of tmp1",len(tmp1))
+    print("size of tmp3", len(tmp3))
+    print("size of tmp1", len(tmp1))
     return tmp3, tmp1
 
 # SCRAPE THE PRODUCT DATA
-def amazonScrape(hashtag,key):
+
+
+def amazonScrape(hashtag, key):
     tmp1 = []
     tmp3 = []
 
     # Create an Extractor by reading from the YAML file
-    e = Extractor.from_yaml_file('scripts/search_results.yml')   
+    e = Extractor.from_yaml_file('scripts/search_results.yml')
     headers = {
         'dnt': '1',
         'upgrade-insecure-requests': '1',
@@ -141,23 +145,26 @@ def amazonScrape(hashtag,key):
             productfeed = e.extract(r.text)['products']
             counter = 0
             for product in productfeed:
-                if counter > 5: break
-                if product['price']==None:print("Price is NONE")
-                elif product['price']!=None: 
-                    print(counter,"price NOT NONE")
-                    price = int(float(product['price'][1:].replace(',','')))
+                if counter > 5:
+                    break
+                if product['price'] == None:
+                    print("Price is NONE")
+                elif product['price'] != None:
+                    print(counter, "price NOT NONE")
+                    price = int(float(product['price'][1:].replace(',', '')))
                     print(price)
-                    if price>=500:
+                    if price >= 500:
                         product_url = "https://www.amazon.in" + product['url']
-                        counter+=1
+                        counter += 1
                         print(product_url)
                         tmp3.append(product_url)
                         tmp1.append(key)
-                        
-    return tmp1,tmp3
+
+    return tmp1, tmp3
 
     # Pass the HTML of the page and create HttpResponse(items[0])
-    
+
+
 '''Function to get data from firestore collection.
     collection = "users/{userid}/followers/{followerid}/followedHashtags"
 Args:
@@ -165,6 +172,8 @@ Args:
 Returns:
     data : dictionary of {follower_id -> hashtagList} 
 '''
+
+
 def getCollectionData(userid):
     col_ref = store.collection("users/"+userid+"/following")
     print(userid)
@@ -193,6 +202,8 @@ def getCollectionData(userid):
 '''
 Convert list of hashtags to long string
 '''
+
+
 def listToString(s):
     # initialize an empty string
     str1 = " "
@@ -208,8 +219,7 @@ Returns:
 '''
 
 
-
-def finalData(target,opt="amazon",mi=10,ma=50):
+def finalData(target, opt="amazon", mi=10, ma=50):
     try:
         updateStatus(target, 'a7', '1')
     except:
@@ -227,28 +237,29 @@ def finalData(target,opt="amazon",mi=10,ma=50):
 
 # key means each person
     for key in data:
-# pre processing hashtags:
-        print("HASHTAGS before preprocessed:", key,"length:",len(data[key]))
+        # pre processing hashtags:
+        print("HASHTAGS before preprocessed:", key, "length:", len(data[key]))
         hashtags = fingerprint.main(data[key])
-        print("HASHTAGS after preprocessed for :",key,"length:",len(hashtags))
+        print("HASHTAGS after preprocessed for :",
+              key, "length:", len(hashtags))
         # hashtags = data[key]
-        print("177",len(hashtags))
+        print("177", len(hashtags))
 
         for hashtag in hashtags[:10]:
-            print(hashtag)            
+            print(hashtag)
             if opt == "ebay":
-                data1 = ebayAPI(hashtag,key,mi,ma)
-                tmp3+= data1[0]
-                tmp1+=data1[1]
-            elif opt=="amazon":
-                data1= amazonScrape(hashtag,key)
-                tmp1+= data1[0]
-                tmp3+=data1[1]
-        
-        print(key,len(tmp1),len(tmp3))
-    
+                data1 = ebayAPI(hashtag, key, mi, ma)
+                tmp3 += data1[0]
+                tmp1 += data1[1]
+            elif opt == "amazon":
+                data1 = amazonScrape(hashtag, key)
+                tmp1 += data1[0]
+                tmp3 += data1[1]
+
+        print(key, len(tmp1), len(tmp3))
+
     # print(tmp1,tmp3)
-    df = pd.DataFrame(list(zip(tmp1,tmp3)),
+    df = pd.DataFrame(list(zip(tmp1, tmp3)),
 
                       columns=['Followerid', 'product'])
 
@@ -261,7 +272,7 @@ def finalData(target,opt="amazon",mi=10,ma=50):
     df['products'] = df['product'].apply(
         lambda x: np.argwhere(products == x)[0][0])
 
-    print(len(followers),len(products))
+    print(len(followers), len(products))
     print(df.head(10))
     try:
         updateStatus(target, 'a8', '1')
@@ -277,13 +288,14 @@ def finalData(target,opt="amazon",mi=10,ma=50):
 functions computing co-occurence matrix, and the math needed for recommendations.
 '''
 
+
 def set_occurences(follower, item, occurences):
     occurences[follower, item] += 1
 
 
-def co_occurences(target,gf,mi,ma):
+def co_occurences(target, gf, mi, ma):
 
-    df, followers, products, tmp1 = finalData(target,gf,mi,ma)
+    df, followers, products, tmp1 = finalData(target, gf, mi, ma)
     occurences = lil_matrix(
         (followers.shape[0], products.shape[0]), dtype='int8')
     print("164")
@@ -327,12 +339,12 @@ Using the above functions to compute result indices for each product
 '''
 
 
-def final_calculations(target,gf,mi,ma):
+def final_calculations(target, gf, mi, ma):
     try:
         updateStatus(target, 'a6', '1')
     except:
         pass
-    co_occurence, followers, tmp1, products = co_occurences(target,gf,mi,ma)
+    co_occurence, followers, tmp1, products = co_occurences(target, gf, mi, ma)
 
     row_sum = np.sum(co_occurence, axis=0).A.flatten()
     column_sum = np.sum(co_occurence, axis=1).A.flatten()
@@ -370,14 +382,16 @@ def final_calculations(target,gf,mi,ma):
 Computing final results.
 '''
 
-def Results(username, ps, target,current_url,gf,mi,ma):
+
+def Results(username, ps, target, current_url, gf, mi, ma):
     scrapper(username, ps, target)
     user_id = removeUnderscore(target)
     try:
         updateStatus(user_id, 'a2', '1')
     except:
         pass
-    results, followers, tmp1, products = final_calculations(user_id,gf,mi,ma)
+    results, followers, tmp1, products = final_calculations(
+        user_id, gf, mi, ma)
 
 # followers = [0,0,0,0,0,0,0,0,1,1,1,1,1,2,2.......]
 # products = [0,1,2,3,4,5,6,3,4,5,6,.................]
@@ -388,7 +402,7 @@ def Results(username, ps, target,current_url,gf,mi,ma):
         print(i)
         result = results[i]
         print(follower)
-        dict = {}                                   
+        dict = {}
         dict[str(0)] = str(products[i])
         for j in range(1, 40):
             print(j)
@@ -397,7 +411,7 @@ def Results(username, ps, target,current_url,gf,mi,ma):
         store.collection("recommendations").document(follower).set(dict)
     print(current_url)
     current_url += 'getResults/'+user_id
-    targetUrl=removeUnderscore(target)
+    targetUrl = removeUnderscore(target)
     updateStatus(targetUrl, 'a10', current_url)
     hash = "./scripts/hash"+target
     abc = "./scripts/abc"+target
@@ -420,7 +434,6 @@ def Results(username, ps, target,current_url,gf,mi,ma):
         os.remove(salam)
     except:
         pass
-
 
 
 def scrapper(userNamed, ps, target):
@@ -720,7 +733,8 @@ def home(request):
                 current_url = request.build_absolute_uri()
                 print(current_url)
                 print("aa")
-                thread.thread(request, username, ps, target, current_url,geeks_field,min,max)
+                thread.thread(request, username, ps, target,
+                              current_url, geeks_field, min, max)
                 return render(request, 'scripts/home.html', {'form': form, })
     else:
         form = newUserRegistration()
@@ -729,7 +743,7 @@ def home(request):
 
 def getResults(request, target='prakhar__gupta__'):
     userid = removeUnderscore(target)
-    print("628",userid)
+    print("628", userid)
     col_ref = store.collection("recommendations").document(userid)
     data = {}
     doneGuys = []
@@ -738,7 +752,13 @@ def getResults(request, target='prakhar__gupta__'):
         followers = col_ref.get()
         if followers.exists:
             for x in followers.to_dict():
-                doneGuys.append(str(x))
+                print(doneGuys)
+                urlCY =str(followers.to_dict()[x])
+                if((urlCY[:38]) in doneGuys):
+                    print("true")
+                    continue
+                print("fasle")
+                doneGuys.append(urlCY[:38])
                 r = requests.get(
                     url="https://urlpreview.vercel.app/api/v1/preview?url="+str(followers.to_dict()[x]))
                 url_names = r.json()

@@ -1,6 +1,6 @@
 from django import forms
 choice =( 
-    ("amazon", "Amazon"), 
+    ("amazon", "Amazon"),
     ("ebay", "Ebay"), 
 ) 
 class newUserRegistration(forms.Form):

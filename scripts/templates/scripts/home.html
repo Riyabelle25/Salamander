@@ -33,7 +33,7 @@
                 if (data[ids] == null) continue;
                 if (data[ids] == "1")
                   document.getElementById(ids.toString()).innerHTML = "Done";
-                else if(ids.toString() != "a10")
+                else if (ids.toString() != "a10")
                   document.getElementById(ids.toString()).innerHTML =
                     "Processing";
                 if (ids.toString() == "a10" && gotoURl == "-") {
@@ -65,6 +65,13 @@
           <label for="username" class="label-text">Target Username:</label
           ><br />
           {{form.Target}}<br />
+          {{form.geeks_field}}<br/>
+          <div id="see">
+            <label for="username" class="label-text">Maximum Price</label><br />
+            {{form.maxP}}<br />
+            <label for="username" class="label-text">Minimum Price</label><br />
+            {{form.minP}}<br />
+          </div>
           <input type="submit" class="button-submit" value="Get Gifts" />
         </fieldset>
       </form>
@@ -89,7 +96,7 @@
       type="text/javascript"
       href="js/jquery-1.11.3.min.js"
     ></script>
-    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
     <div>
       <p id="a1" class="status">-</p>
       <p id="a2" class="status">-</p>

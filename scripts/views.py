@@ -55,7 +55,7 @@ environ.Env.read_env()
 
 
 # GET items from EBAY-API
-def ebayAPI(hashtag,key):
+def ebayAPI(hashtag,key,min=10,max=50):
     tmp1= []
     tmp3 = []
     api = finding(appid = 'SarthakS-Salamand-PRD-8f78dd8ce-ef33d6b3', config_file=None)
@@ -209,7 +209,7 @@ Returns:
 
 
 
-def finalData(target,opt="amazon"):
+def finalData(target,opt="amazon",mi=10,ma=50):
     try:
         updateStatus(target, 'a7', '1')
     except:
@@ -237,7 +237,7 @@ def finalData(target,opt="amazon"):
         for hashtag in hashtags[:10]:
             print(hashtag)            
             if opt == "ebay":
-                data1 = ebayAPI(hashtag,key)
+                data1 = ebayAPI(hashtag,key,mi,ma)
                 tmp3+= data1[0]
                 tmp1+=data1[1]
             elif opt=="amazon":
@@ -281,9 +281,9 @@ def set_occurences(follower, item, occurences):
     occurences[follower, item] += 1
 
 
-def co_occurences(target):
+def co_occurences(target,gf,mi,ma):
 
-    df, followers, products, tmp1 = finalData(target)
+    df, followers, products, tmp1 = finalData(target,gf,mi,ma)
     occurences = lil_matrix(
         (followers.shape[0], products.shape[0]), dtype='int8')
     print("164")
@@ -327,12 +327,12 @@ Using the above functions to compute result indices for each product
 '''
 
 
-def final_calculations(target):
+def final_calculations(target,gf,mi,ma):
     try:
         updateStatus(target, 'a6', '1')
     except:
         pass
-    co_occurence, followers, tmp1, products = co_occurences(target)
+    co_occurence, followers, tmp1, products = co_occurences(target,gf,mi,ma)
 
     row_sum = np.sum(co_occurence, axis=0).A.flatten()
     column_sum = np.sum(co_occurence, axis=1).A.flatten()
@@ -370,14 +370,14 @@ def final_calculations(target):
 Computing final results.
 '''
 
-def Results(username, ps, target,current_url):
+def Results(username, ps, target,current_url,gf,mi,ma):
     scrapper(username, ps, target)
     user_id = removeUnderscore(target)
     try:
         updateStatus(user_id, 'a2', '1')
     except:
         pass
-    results, followers, tmp1, products = final_calculations(user_id)
+    results, followers, tmp1, products = final_calculations(user_id,gf,mi,ma)
 
 # followers = [0,0,0,0,0,0,0,0,1,1,1,1,1,2,2.......]
 # products = [0,1,2,3,4,5,6,3,4,5,6,.................]
@@ -709,6 +709,9 @@ def home(request):
         if form.is_valid():
             username = form.cleaned_data['username']
             ps = form.cleaned_data['ps']
+            geeks_field = form.cleaned_data['geeks_field']
+            min = form.cleaned_data['minP']
+            max = form.cleaned_data['maxP']
             target = form.cleaned_data['Target']
             if username == '' or ps == '' or target == '':
                 return render(request, 'scripts/home.html', {'form': form, 'message': 'Invalid Details'})
@@ -717,7 +720,7 @@ def home(request):
                 current_url = request.build_absolute_uri()
                 print(current_url)
                 print("aa")
-                thread.thread(request, username, ps, target, current_url)
+                thread.thread(request, username, ps, target, current_url,geeks_field,min,max)
                 return render(request, 'scripts/home.html', {'form': form, })
     else:
         form = newUserRegistration()
@@ -729,12 +732,17 @@ def getResults(request, target='prakhar__gupta__'):
     print("628",userid)
     col_ref = store.collection("recommendations").document(userid)
     data = {}
-
+    doneGuys = []
     counter = 0
     try:
         followers = col_ref.get()
         if followers.exists:
             for x in followers.to_dict():
+                if((str(x)) in doneGuys):
+                    print("true")
+                    continue
+                print("fasle")
+                doneGuys.append(str(x))
                 r = requests.get(
                     url="https://urlpreview.vercel.app/api/v1/preview?url="+str(followers.to_dict()[x]))
                 url_names = r.json()

@@ -48,13 +48,57 @@ app = firebase_admin.initialize_app(credz)
 store = firestore.client()
 user_id = ""
 
+# GET items from EBAY-API
+def ebayAPI(hashtag,key):
+    tmp1= []
+    tmp3 = []
+    api = finding(appid = 'SarthakS-Salamand-PRD-8f78dd8ce-ef33d6b3', config_file=None)
+    api_request = { 'keywords': hashtag,'itemFilter': [               
+                # {'name': 'LocatedIn',
+                #  'value': 'IN'},
+                #  {'name':'Currency',
+                #  'value':'INR'},
+                 {'name': 'BestOfferOnly',
+                 'value': 1},
+                #  {'name':'FeaturedOnly',
+                #  'value': 1},
+                 {'name':'HideDuplicateItems',
+                 'value': 1},
+                 {'name':'MaxPrice',
+                 'value':'50.00'
+                #  'paramName':'Currency',
+                #  'paramValue':'INR'
+                 },
+                 {'name':'MinPrice',
+                 'value':'10.00'}
+                #  'paramName':'Currency',
+                #  'paramValue':'INR'
+                #  }
+                 ],
+                 'SortOrderType':'PricePlusShippingLowest'}
+    response = api.execute('findItemsByKeywords', api_request)
+    soup = BeautifulSoup(response.content,'lxml')
+    
+    if (soup.find('totalentries'))!= None:
+        print("total enteries for:",hashtag, int(soup.find('totalentries').text))
+        items = soup.find_all('viewitemurl')
+        
+        if len(items)>=2:
+            for item in items[:2]:
+                print(key,item.contents[0])
+                tmp3.append(item.contents[0])
+                tmp1.append(key)
+    print("size of tmp3",len(tmp3))
+    print("size of tmp1",len(tmp1))
+    return tmp3, tmp1
 
 # SCRAPE THE PRODUCT DATA
-def scrape(url):
+def amazonScrape(hashtag,key):
+    tmp1 = []
+    tmp3 = []
 
     # Create an Extractor by reading from the YAML file
-    e = Extractor.from_yaml_file('scripts/search_results.yml')
-
+    e = Extractor.from_yaml_file('scripts/search_results.yml')   
     headers = {
         'dnt': '1',
         'upgrade-insecure-requests': '1',
@@ -69,7 +113,7 @@ def scrape(url):
     }
 
     # Download the page using requests
-
+    url = "https://www.amazon.in/s?k=" + hashtag
     print("Downloading %s" % url)
     r = requests.get(url, headers=headers, timeout=28)
     # Simple check to check if page was blocked (Usually 503)
@@ -83,10 +127,31 @@ def scrape(url):
         print(r.status_code)
         return None
 
-    # Pass the HTML of the page and create
-    return e.extract(r.text)
+    if e.extract(r.text) == None:
+        print("None!")
 
+    else:
+        if e.extract(r.text)['products'] != None:
+            productfeed = e.extract(r.text)['products']
+            counter = 0
+            for product in productfeed:
+                if counter > 5: break
+                if product['price']==None:print("Price is NONE")
+                elif product['price']!=None: 
+                    print(counter,"price NOT NONE")
+                    price = int(float(product['price'][1:].replace(',','')))
+                    print(price)
+                    if price>=500:
+                        product_url = "https://www.amazon.in" + product['url']
+                        counter+=1
+                        print(product_url)
+                        tmp3.append(product_url)
+                        tmp1.append(key)
+                        
+    return tmp1,tmp3
 
+    # Pass the HTML of the page and create HttpResponse(items[0])
+    
 '''Function to get data from firestore collection.
     collection = "users/{userid}/followers/{followerid}/followedHashtags"
 Args:
@@ -94,8 +159,6 @@ Args:
 Returns:
     data : dictionary of {follower_id -> hashtagList} 
 '''
-
-
 def getCollectionData(userid):
     col_ref = store.collection("users/"+userid+"/following")
     print(userid)
@@ -124,8 +187,6 @@ def getCollectionData(userid):
 '''
 Convert list of hashtags to long string
 '''
-
-
 def listToString(s):
     # initialize an empty string
     str1 = " "
@@ -138,11 +199,10 @@ Args:
     none.
 Returns:
     list: dataframe of followerid x hashtags, followers, hashtags
-
 '''
 
 
-def finalData(target):
+def finalData(target,opt="amazon"):
     updateStatus(target,'a7','1')
     data = getCollectionData(target)
 
@@ -151,38 +211,35 @@ def finalData(target):
     # "Riya":["MHA","Darkacademia","Brookyln99","Cupcakes","HarryPotter"],
     # }
     # print(data)
+
     tmp1 = []  # tmp1 is storing followers [data ka key]
     tmp3 = []  # tmp3 is storing products ke urls
 
+# key means each person
     for key in data:
-        try:
-            hashtags = fingerprint.main(listToString(data[key]))
-            print(len(hashtags))
+# pre processing hashtags:
+        print("HASHTAGS before preprocessed:", key,"length:",len(data[key]))
+        hashtags = fingerprint.main(data[key])
+        print("HASHTAGS after preprocessed for :",key,"length:",len(hashtags))
+        # hashtags = data[key]
+        print("177",len(hashtags))
 
-            for hashtag in hashtags[:10]:
-                try:
-                    print(hashtag)
-                    url = "https://www.amazon.in/s?k=" + hashtag
-                    data1 = scrape(url)
-                    if data1 == None:
-                        print("None!")
-                    else:
-                        if data1['products'] != None:
-                            productfeed = data1['products']
-                            for product in productfeed[:5]:
-                                # tmp3, tmp1 for zipping into df
-                                product_url = "https://www.amazon.in" + product['url']
-                                print(product_url)
-                                tmp3.append(product_url)
-                                tmp1.append(key)
-                except:
-                    continue
-        except:
-            continue
+        for hashtag in hashtags[:10]:
+            print(hashtag)            
+            if opt == "ebay":
+                data1 = ebayAPI(hashtag,key)
+                tmp3+= data1[0]
+                tmp1+=data1[1]
+            elif opt=="amazon":
+                data1= amazonScrape(hashtag,key)
+                tmp1+= data1[0]
+                tmp3+=data1[1]
+        
+        print(key,len(tmp1),len(tmp3))
+    
+    # print(tmp1,tmp3)
+    df = pd.DataFrame(list(zip(tmp1,tmp3)),
 
-    # print(key,len(tmp1),len(tmp3))
-
-    df = pd.DataFrame(list(zip(tmp1, tmp3)),
                       columns=['Followerid', 'product'])
 
     followers = df["Followerid"].unique()
@@ -193,8 +250,9 @@ def finalData(target):
         lambda x: np.argwhere(followers == x)[0][0])
     df['products'] = df['product'].apply(
         lambda x: np.argwhere(products == x)[0][0])
-    # print(len(followers),len(products))
-    # print(df.head(10))
+
+    print(len(followers),len(products))
+    print(df.head(10))
     updateStatus(target,'a8','1')
     return df, followers, products, tmp1
 
@@ -205,7 +263,6 @@ def finalData(target):
 ''' 
 functions computing co-occurence matrix, and the math needed for recommendations.
 '''
-
 
 def set_occurences(follower, item, occurences):
     occurences[follower, item] += 1
@@ -292,8 +349,6 @@ def final_calculations(target):
 '''
 Computing final results.
 '''
-
-
 def Results(username, ps, target,current_url):
     scrapper(username, ps, target)
     user_id = removeUnderscore(target)
@@ -306,11 +361,12 @@ def Results(username, ps, target,current_url):
     for i in range(len(results)):
         print(len(results))
         follower = tmp1[i]
+        print(i)
         result = results[i]
         print(follower)
-        dict = {}
+        dict = {}                                   
         dict[str(0)] = str(products[i])
-        for j in range(1, 10):
+        for j in range(1, 40):
             print(j)
             dict[str(j)] = str(products[result[j]])
         
@@ -319,6 +375,7 @@ def Results(username, ps, target,current_url):
     thread2 = utils.updateClass()
     thread2.thread(target, 'a10', '1')
     current_url+=('getResults/'+target)
+
     webbrowser.open(current_url)  # Go to example.com
 
 def scrapper(userNamed, ps, target):
@@ -605,6 +662,7 @@ def home(request):
 
 def getResults(request, target='prakhar__gupta__'):
     userid = removeUnderscore(target)
+    print("628",userid)
     col_ref = store.collection("recommendations").document(userid)
     data = {}
 

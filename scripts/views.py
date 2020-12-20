@@ -739,6 +739,13 @@ def getResults(request, target='prakhar__gupta__'):
         followers = col_ref.get()
         if followers.exists:
             for x in followers.to_dict():
+<<<<<<< HEAD
+=======
+                if((str(x)) in doneGuys):
+                    print("true")
+                    continue
+                print("fasle")
+>>>>>>> ebay
                 doneGuys.append(str(x))
                 r = requests.get(
                     url="https://urlpreview.vercel.app/api/v1/preview?url="+str(followers.to_dict()[x]))

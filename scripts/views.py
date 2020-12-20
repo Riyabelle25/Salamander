@@ -384,6 +384,7 @@ def Results(username, ps, target,current_url):
 # products = [0,1,2,3,4,5,6,3,4,5,6,.................]
 
     for i in range(len(results)):
+        n= 40
         print(len(results))
         follower = tmp1[i]
         print(i)
@@ -391,6 +392,7 @@ def Results(username, ps, target,current_url):
         print(follower)
         dict = {}                                   
         dict[str(0)] = str(products[i])
+        if len(results)<40: n = len(results)
         for j in range(1, 40):
             print(j)
             dict[str(j)] = str(products[result[j]])

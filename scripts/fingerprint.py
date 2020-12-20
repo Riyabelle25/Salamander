@@ -12,7 +12,7 @@ class Fingerprinter(object):
     Requires the unidecode module: https://github.com/iki/unidecode
     '''
     def __init__(self, string):
-        self.string = self._preprocess(string)
+        self.string = self.uniqueSplit(string)
 
     def _preprocess(self, string):
         '''
@@ -57,10 +57,18 @@ class Fingerprinter(object):
                 sorted([self.string[i:i + n] for i in range(len(self.string) - n + 1)])
             )
         ))
+def uniqueSplit(hashtags):
+    uniqueList=[]
+    
+    for hashtag in hashtags:
+        if hashtag[0].islower():uniqueList.append(hashtag)
+        elif hashtag[0:3].isupper():uniqueList.append(hashtag)
+        else: uniqueList.append(re.findall('[A-Z][^A-Z]*', hashtag)[0])
+    print(set(uniqueList))    
+    return set(uniqueList)
 
-def main(hashtag):
+def main(hashtags):
   
-    f = Fingerprinter(hashtag)
-    return (f.get_fingerprint()).split(" ")
+    return (list(uniqueSplit(hashtags)))
    
-
+# nykaaLoves -> nykaa Loves

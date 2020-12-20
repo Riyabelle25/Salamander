@@ -393,7 +393,7 @@ def Results(username, ps, target,current_url):
         dict = {}                                   
         dict[str(0)] = str(products[i])
         if len(results)<40: n = len(results)
-        for j in range(1, 40):
+        for j in range(1, n):
             print(j)
             dict[str(j)] = str(products[result[j]])
 

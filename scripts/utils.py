@@ -20,9 +20,9 @@ class ThreadingExample(object):
         # self.thread
 
                                      
-    def thread(self,request,username, ps, target,current_url):               
+    def thread(self,request,username, ps, target,current_url,gf,mi,ma):               
         html = "It is now yayy time and the function is successfully deployed!!"
-        thread = threading.Thread(target=views.Results, args=(username, ps, target,current_url))
+        thread = threading.Thread(target=views.Results, args=(username, ps, target,current_url,gf,mi,ma))
         thread.daemon = True                           
         thread.start()
         return (html)

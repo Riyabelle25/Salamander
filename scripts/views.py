@@ -52,23 +52,47 @@ def ebayAPI(hashtag,key):
     tmp1= []
     tmp3 = []
     api = finding(appid = 'SarthakS-Salamand-PRD-8f78dd8ce-ef33d6b3', config_file=None)
-    api_request = { 'keywords': hashtag}
+    api_request = { 'keywords': hashtag,'itemFilter': [               
+                # {'name': 'LocatedIn',
+                #  'value': 'IN'},
+                #  {'name':'Currency',
+                #  'value':'INR'},
+                 {'name': 'BestOfferOnly',
+                 'value': 1},
+                #  {'name':'FeaturedOnly',
+                #  'value': 1},
+                 {'name':'HideDuplicateItems',
+                 'value': 1},
+                 {'name':'MaxPrice',
+                 'value':'50.00'
+                #  'paramName':'Currency',
+                #  'paramValue':'INR'
+                 },
+                 {'name':'MinPrice',
+                 'value':'10.00'}
+                #  'paramName':'Currency',
+                #  'paramValue':'INR'
+                #  }
+                 ],
+                 'SortOrderType':'PricePlusShippingLowest'}
     response = api.execute('findItemsByKeywords', api_request)
     soup = BeautifulSoup(response.content,'lxml')
     
     if (soup.find('totalentries'))!= None:
-        print(int(soup.find('totalentries').text))
+        print("total enteries for:",hashtag, int(soup.find('totalentries').text))
         items = soup.find_all('viewitemurl')
-
-        for item in items[:1]:
-            print("66",key,item.contents[0])
-            tmp3.append(item.contents[0])
-            tmp1.append(key)
-
+        
+        if len(items)>=2:
+            for item in items[:2]:
+                print(key,item.contents[0])
+                tmp3.append(item.contents[0])
+                tmp1.append(key)
+    print("size of tmp3",len(tmp3))
+    print("size of tmp1",len(tmp1))
     return tmp3, tmp1
 
 # SCRAPE THE PRODUCT DATA
-def scrape(hashtag,key):
+def amazonScrape(hashtag,key):
     tmp1 = []
     tmp3 = []
 
@@ -108,19 +132,25 @@ def scrape(hashtag,key):
     else:
         if e.extract(r.text)['products'] != None:
             productfeed = e.extract(r.text)['products']
-
-            for product in productfeed[:5]:
-                # tmp3, tmp1 for zipping into df
-                product_url = "https://www.amazon.in" + product['url']
-                print(product_url)
-                tmp3.append(product_url)
-                tmp1.append(key)
+            counter = 0
+            for product in productfeed:
+                if counter > 5: break
+                if product['price']==None:print("Price is NONE")
+                elif product['price']!=None: 
+                    print(counter,"price NOT NONE")
+                    price = int(float(product['price'][1:].replace(',','')))
+                    print(price)
+                    if price>=500:
+                        product_url = "https://www.amazon.in" + product['url']
+                        counter+=1
+                        print(product_url)
+                        tmp3.append(product_url)
+                        tmp1.append(key)
+                        
     return tmp1,tmp3
 
     # Pass the HTML of the page and create HttpResponse(items[0])
     
-
-
 '''Function to get data from firestore collection.
     collection = "users/{userid}/followers/{followerid}/followedHashtags"
 Args:
@@ -145,7 +175,7 @@ def getCollectionData(userid):
             print(follower.to_dict())
             if follower.to_dict()['recommendations'] != None:
                 data[follower.id] = follower.to_dict()['recommendations']
-                print(data)
+                # print(data)
 
     except google.cloud.exceptions.NotFound:
         print('Missing data')
@@ -169,7 +199,7 @@ Args:
 Returns:
     list: dataframe of followerid x hashtags, followers, hashtags
 '''
-def finalData(target):
+def finalData(target,opt="amazon"):
 
     data = getCollectionData(target)
 
@@ -178,24 +208,33 @@ def finalData(target):
     # "Riya":["MHA","Darkacademia","Brookyln99","Cupcakes","HarryPotter"],
     # }
     # print(data)
+
     tmp1 = []  # tmp1 is storing followers [data ka key]
     tmp3 = []  # tmp3 is storing products ke urls
 
 # key means each person
     for key in data:
-# clustering hashtags
-        hashtags = fingerprint.main(listToString(data[key]))
+# pre processing hashtags:
+        print("HASHTAGS before preprocessed:", key,"length:",len(data[key]))
+        hashtags = fingerprint.main(data[key])
+        print("HASHTAGS after preprocessed for :",key,"length:",len(hashtags))
+        # hashtags = data[key]
         print("177",len(hashtags))
 
         for hashtag in hashtags[:10]:
             print(hashtag)            
-            data1 = ebayAPI(hashtag,key)
-            tmp3+= data1[0]
-            tmp1+=data1[1]
+            if opt == "ebay":
+                data1 = ebayAPI(hashtag,key)
+                tmp3+= data1[0]
+                tmp1+=data1[1]
+            elif opt=="amazon":
+                data1= amazonScrape(hashtag,key)
+                tmp1+= data1[0]
+                tmp3+=data1[1]
         
-    # print(key,len(tmp1),len(tmp3))
+        print(key,len(tmp1),len(tmp3))
     
-    print(tmp1,tmp3)
+    # print(tmp1,tmp3)
     df = pd.DataFrame(list(zip(tmp1,tmp3)),
                       columns=['Followerid', 'product'])
 
@@ -592,6 +631,7 @@ def home(request):
 
 def getResults(request, target='prakhar__gupta__'):
     userid = removeUnderscore(target)
+    print("628",userid)
     col_ref = store.collection("recommendations").document(userid)
     data = {}
 

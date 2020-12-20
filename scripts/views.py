@@ -3,11 +3,12 @@ from django.http import HttpResponse
 import datetime
 import webbrowser
 import firebase_admin
+from django.http import JsonResponse
 import google.cloud
 import pandas as pd
-from django.http import JsonResponse
 import json
 import numpy as np
+import environ
 from scipy.sparse import csr_matrix
 from .forms import newUserRegistration
 from scipy.sparse import csr_matrix, lil_matrix
@@ -47,6 +48,11 @@ app = firebase_admin.initialize_app(credz)
 
 store = firestore.client()
 user_id = ""
+
+env = environ.Env()
+environ.Env.read_env()
+# SCRAPE THE PRODUCT DATA
+
 
 # GET items from EBAY-API
 def ebayAPI(hashtag,key):
@@ -176,7 +182,7 @@ def getCollectionData(userid):
             print(follower.to_dict())
             if follower.to_dict()['recommendations'] != None:
                 data[follower.id] = follower.to_dict()['recommendations']
-                #print(data)
+                print(data)
 
     except google.cloud.exceptions.NotFound:
         print('Missing data')
@@ -202,8 +208,12 @@ Returns:
 '''
 
 
+
 def finalData(target,opt="amazon"):
-    updateStatus(target,'a7','1')
+    try:
+        updateStatus(target, 'a7', '1')
+    except:
+        pass
     data = getCollectionData(target)
 
     # data = {"Nish":["MHA","Darkacademia","Knights","Poetry","Pups"],
@@ -253,7 +263,10 @@ def finalData(target,opt="amazon"):
 
     print(len(followers),len(products))
     print(df.head(10))
-    updateStatus(target,'a8','1')
+    try:
+        updateStatus(target, 'a8', '1')
+    except:
+        pass
     return df, followers, products, tmp1
 
     # url = "https://www.amazon.in/s?k=Parasite"
@@ -315,8 +328,12 @@ Using the above functions to compute result indices for each product
 
 
 def final_calculations(target):
-    updateStatus(target,'a6','1')
+    try:
+        updateStatus(target, 'a6', '1')
+    except:
+        pass
     co_occurence, followers, tmp1, products = co_occurences(target)
+
     row_sum = np.sum(co_occurence, axis=0).A.flatten()
     column_sum = np.sum(co_occurence, axis=1).A.flatten()
     total = np.sum(row_sum, axis=0)
@@ -342,17 +359,24 @@ def final_calculations(target):
     max = max_indicator_indices.max()
     indicators = indicators[:, :max+1]
     indicators_indices = indicators_indices[:, :max+1]
-    updateStatus(target,'a9','1')
+    try:
+        updateStatus(target, 'a9', '1')
+    except:
+        pass
     return result_indices, followers, tmp1, products
 
 
 '''
 Computing final results.
 '''
+
 def Results(username, ps, target,current_url):
     scrapper(username, ps, target)
     user_id = removeUnderscore(target)
-    updateStatus(user_id,'a2','1')
+    try:
+        updateStatus(user_id, 'a2', '1')
+    except:
+        pass
     results, followers, tmp1, products = final_calculations(user_id)
 
 # followers = [0,0,0,0,0,0,0,0,1,1,1,1,1,2,2.......]
@@ -369,18 +393,41 @@ def Results(username, ps, target,current_url):
         for j in range(1, 40):
             print(j)
             dict[str(j)] = str(products[result[j]])
-        
+
         store.collection("recommendations").document(follower).set(dict)
     print(current_url)
-    thread2 = utils.updateClass()
-    thread2.thread(target, 'a10', '1')
-    current_url+=('getResults/'+target)
+    current_url += 'getResults/'+user_id
+    targetUrl=removeUnderscore(target)
+    updateStatus(targetUrl, 'a10', current_url)
+    hash = "./scripts/hash"+target
+    abc = "./scripts/abc"+target
+    account = "./scripts/account"+target
+    salam = "./scripts/"+target+".txt"
+    print(os.listdir())
+    try:
+        os.remove(hash)
+    except Exception as e:
+        print(e)
+    try:
+        os.remove(abc)
+    except:
+        pass
+    try:
+        os.remove(account)
+    except:
+        pass
+    try:
+        os.remove(salam)
+    except:
+        pass
 
-    webbrowser.open(current_url)  # Go to example.com
+
 
 def scrapper(userNamed, ps, target):
-    targetShort = removeUnderscore(target)
-    updateStatus(targetShort,'a3','1')
+    try:
+        updateStatus(targetShort, 'a3', '1')
+    except:
+        pass
     count = 100  # number of profiles you want to scrap
     # User
     account = userNamed  # account from
@@ -389,13 +436,36 @@ def scrapper(userNamed, ps, target):
     yourusername = userNamed  # your Instagram username
     yourpassword = ps  # your Instagram password
     options = webdriver.ChromeOptions()
-    options.add_argument('--ignore-certificate-errors')
-    options.add_argument(
-        '--user-agent="Mozilla/5.0 (iPhone; CPU iPhone OS 12_1_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/16D57"')
-    try:
-        driver = webdriver.Chrome(executable_path='./scripts/chromedriver')
-    except:
-        driver = webdriver.Chrome(executable_path='./scripts/chromedriver.exe')
+    print(env('is_heroku'))
+    if(env('is_heroku') == 'true'):
+        options.add_argument('--headless')
+        options.add_argument('--disable-gpu')
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+        options.add_argument('--ignore-certificate-errors')
+        options.add_argument(
+            '--user-agent="Mozilla/5.0 (iPhone; CPU iPhone OS 12_1_4 like Mac OS X) (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.66 Safari/537.36"')
+        try:
+            options.binary_location = os.environ.get(
+                'GOOGLE_CHROME_BIN', '/app/.apt/usr/bin/google-chrome')
+        except:
+            pass
+        try:
+            driver = webdriver.Chrome(
+                executable_path='/app/.chromedriver/bin/chromedriver', chrome_options=options)
+        except:
+            driver = webdriver.Chrome(
+                executable_path='./scripts/chromedriver', chrome_options=options)
+    else:
+        options.add_argument('--ignore-certificate-errors')
+        options.add_argument(
+            '--user-agent="Mozilla/5.0 (iPhone; CPU iPhone OS 12_1_4 like Mac OS X) (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.66 Safari/537.36"')
+        try:
+            driver = webdriver.Chrome(
+                executable_path='./scripts/chromedriver', chrome_options=options)
+        except:
+            driver = webdriver.Chrome(
+                executable_path='./scripts/chromedriver.exe', chrome_options=options)
     # Go to login page
     driver.get('https://www.instagram.com/accounts/login/')
     # needed
@@ -417,7 +487,7 @@ def scrapper(userNamed, ps, target):
         return ("Check Your Network!!")
     # This file saves All people to be checked for public profile
     dirname = os.path.dirname(os.path.abspath(__file__))
-    csvfilename = os.path.join(dirname, account + "-" + page + ".txt")
+    csvfilename = os.path.join(dirname, target + ".txt")
     f = open(csvfilename, 'w')
     # Going to someone's account
     driver.get('https://www.instagram.com/%s' % attack)
@@ -433,7 +503,7 @@ def scrapper(userNamed, ps, target):
     f.write(('*'+attack))
     f.write('\n')
     # attack's 50 peeps
-    for i in range(1, 400):
+    for i in range(1, 220):
         try:
             scr1 = driver.find_element_by_xpath(
                 '/html/body/div[5]/div/div/div[2]/ul/div/li[%s]' % i)
@@ -454,8 +524,13 @@ def scrapper(userNamed, ps, target):
 
     # user
     # following
-    faccount = open("account", 'w')
-    driver.get('https://www.instagram.com/%s' % account)
+    alltosearch = os.path.join(dirname, "account"+target)
+    faccount = open(alltosearch, 'w')
+    try:
+        driver.set_page_load_timeout(12)
+        driver.get('https://www.instagram.com/%s' % account)
+    except:
+        driver.get('https://www.instagram.com/%s' % account)
     sleep(2)
     driver.find_element_by_xpath('//a[contains(@href, "%s")]' % page).click()
     scr2 = driver.find_element_by_xpath(
@@ -477,20 +552,20 @@ def scrapper(userNamed, ps, target):
         sleep(0.1)
         text = scr1.text
         list = text.encode('utf-8').split()
-        file_exists = os.path.isfile("account")
+        file_exists = os.path.isfile(alltosearch)
         print('{};{}'.format(i, str(list[0]).split('\'')[1]))
         faccount.write((str(list[0]).split('\'')[1]) + "\r\n")
         if i == (count-1):
             print(x)
     faccount.close()
-    updateStatus(targetShort,'a4','1')
+
     #
-    faccount = open("account", 'r')
+    faccount = open(alltosearch, 'r')
     for x in faccount:
         try:
             f.write('*'+x.split('\n')[0])
             f.write('\n')
-            driver.set_page_load_timeout(6)
+            driver.set_page_load_timeout(12)
             driver.get('https://www.instagram.com/%s' % x.split('\n')[0])
             driver.find_element_by_xpath(
                 '//a[contains(@href, "%s")]' % page).click()
@@ -508,7 +583,6 @@ def scrapper(userNamed, ps, target):
         # 100 people of all 7 peeps
         for i in range(1, 70):
             try:
-                driver.set_page_load_timeout(6)
                 scr1 = driver.find_element_by_xpath(
                     '/html/body/div[5]/div/div/div[2]/ul/div/li[%s]' % i)
                 driver.execute_script("arguments[0].scrollIntoView();", scr1)
@@ -518,7 +592,7 @@ def scrapper(userNamed, ps, target):
                 for ar in list:
                     if(str(ar) == 'b\'Verified\''):
                         publicNo = publicNo+1
-                        if publicNo > 10:
+                        if publicNo > 6:
                             break
                         file_exists = os.path.isfile(csvfilename)
                         print('{};{}'.format(i, str(list[0]).split('\'')[1]))
@@ -532,13 +606,13 @@ def scrapper(userNamed, ps, target):
     st = f.read()
     f.close()
     f = open(csvfilename, 'r')
-    flock = open("abc", 'w')
+    alltoabc = os.path.join(dirname, "abc" + target)
+    flock = open(alltoabc, 'w')
     for x in f:
         try:
             if(x[0] == '*'):
                 flock.write(x)
                 continue
-            driver.set_page_load_timeout(6)
             link = "https://www.instagram.com/"+(x.split('\n')[0])+"/?__a=1"
             print(link)
             req = Request(
@@ -548,7 +622,10 @@ def scrapper(userNamed, ps, target):
                     'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 12_1_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/16D57'
                 }
             )
-            webUrl = urlopen(req).read()
+            try:
+                webUrl = urlopen(req, timeout=4).read()
+            except:
+                continue
             flock.write(webUrl.decode("utf-8"))
             flock.write("\n")
             print(link)
@@ -556,8 +633,9 @@ def scrapper(userNamed, ps, target):
             continue
     f.close()
     flock.close()
-    f = open("abc", 'r')
-    fhash = open("hash", 'w')
+    f = open(alltoabc, 'r')
+    alltohash = os.path.join(dirname, "hash" + target)
+    fhash = open(alltohash, 'w')
     for x in f:
         if(x[0] == '*'):
             fhash.write(x)
@@ -573,7 +651,7 @@ def scrapper(userNamed, ps, target):
                 fhash.write(data)
                 fhash.write("\n")
     fhash.close()
-    fhash = open("hash", 'r')
+    fhash = open(alltohash, 'r')
     dataG = []
     username = ''
     col_ref = store.collection('users')
@@ -591,12 +669,11 @@ def scrapper(userNamed, ps, target):
                 final["recommendations"] = dataG
                 try:
                     docs = col_ref.get()
-                    for doc in docs:
-                        tmp = 'users/' + str(tr) + '/following'
-                        if username != '':
-                            store.collection(tmp).document(username).set(final)
-                        else:
-                            print('harrr')
+                    tmp = 'users/' + str(tr) + '/following'
+                    if username != '':
+                        store.collection(tmp).document(username).set(final)
+                    else:
+                        print('harrr')
                 except google.cloud.exceptions.NotFound:
                     print(u'Missing data')
                     continue
@@ -609,7 +686,10 @@ def scrapper(userNamed, ps, target):
         dataG.append(x.split('\n')[0])
     # f.close()
     fhash.close()
-    updateStatus(targetShort,'a5','1')
+    try:
+        updateStatus(targetShort, 'a4', '1')
+    except:
+        pass
     return ("st")
 
 
@@ -630,9 +710,6 @@ def home(request):
             username = form.cleaned_data['username']
             ps = form.cleaned_data['ps']
             target = form.cleaned_data['Target']
-            username='salamandar_nemesis'
-            ps='prakhar123'
-            target='prakhar__gupta__'
             if username == '' or ps == '' or target == '':
                 return render(request, 'scripts/home.html', {'form': form, 'message': 'Invalid Details'})
             else:
@@ -640,20 +717,7 @@ def home(request):
                 current_url = request.build_absolute_uri()
                 print(current_url)
                 print("aa")
-                uid=removeUnderscore(target)
-                print(uid)
-                thread3 = utils.updateClass()
-                thread3.thread(uid, 'a10', '2')
-                updateStatus(uid,'a1','1')
-                updateStatus(uid,'a2','2')
-                updateStatus(uid,'a3','2')
-                updateStatus(uid,'a4','2')
-                updateStatus(uid,'a5','2')
-                updateStatus(uid,'a6','2')
-                updateStatus(uid,'a7','2')
-                updateStatus(uid,'a8','2')
-                updateStatus(uid,'a9','2')
-                thread.thread(request,username, ps, target,current_url)
+                thread.thread(request, username, ps, target, current_url)
                 return render(request, 'scripts/home.html', {'form': form, })
     else:
         form = newUserRegistration()
@@ -684,33 +748,31 @@ def getResults(request, target='prakhar__gupta__'):
     except google.cloud.exceptions.NotFound:
         print('Missing data')
     return render(request, 'scripts/results.html', {'data': data})
+
+
 def validate_username(request):
     username = request.GET.get('username', None)
-    username=removeUnderscore(username)
+    username = removeUnderscore(username)
     col_ref = store.collection("update/"+username+"/status")
-    print(username)
     data = {}
     try:
-        print("131")
         followers = col_ref.get()
-        print(followers)
         for follower in followers:
-            print(follower.id)
             current_path = "update/"+username+"/status" + follower.id
-            print(current_path)
-            print(follower.to_dict())
             if follower.to_dict()["isDone"] != None:
                 data[follower.id] = follower.to_dict()["isDone"]
-                #print(data)
+                # print(data)
             else:
-                data[follower.id] = '0'                
+                data[follower.id] = '0'
     except google.cloud.exceptions.NotFound:
         print('Missing data')
     return JsonResponse(data)
-def updateStatus(userid,name,update):
+
+
+def updateStatus(userid, name, update):
     try:
         tmp = "update/"+userid+"/status"
-        data={"isDone":update}
+        data = {"isDone": update}
         store.collection(tmp).document(name).set(data)
     except google.cloud.exceptions.NotFound:
         print(u'Missing data')

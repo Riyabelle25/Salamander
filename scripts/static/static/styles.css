@@ -5,7 +5,6 @@ body {
   background-size: cover;
   background-repeat: no-repeat;
   overflow-x: hidden;
-  overflow-y: hidden;
   opacity: 10;
 }
 
@@ -29,6 +28,14 @@ body {
   left: 10%;
   top: 40%;
   text-shadow: 0.2rem 0.2rem #fac25c;
+}
+.status{
+  font-family: "Dancing Script", cursive;
+  font-size: 20px;
+  color: #fd557d;
+  background-color: transparent;
+  height: auto;
+  width: auto;
 }
 .formdiv {
   position: absolute;

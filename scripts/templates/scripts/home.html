@@ -3,7 +3,6 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gift Recommendation System</title>
     <link rel="stylesheet" href="{% static 'static/styles.css' %}" />
     <link
@@ -19,6 +18,7 @@
   </head>
   <body>
     <script>
+      var gotoURl = "-";
       window.setInterval(function () {
         var username = document.getElementById("target").value;
         if (username != "") {
@@ -33,16 +33,19 @@
                 if (data[ids] == null) continue;
                 if (data[ids] == "1")
                   document.getElementById(ids.toString()).innerHTML = "Done";
-                else if (data[ids] == "0")
-                  document.getElementById(ids.toString()).innerHTML = "Failed";
-                else
+                else if(ids.toString() != "a10")
                   document.getElementById(ids.toString()).innerHTML =
                     "Processing";
+                if (ids.toString() == "a10" && gotoURl == "-") {
+                  document.getElementById(ids.toString()).innerHTML = data[ids];
+                  gotoURl = data[ids];
+                  window.open(gotoURl);
+                }
               }
             },
           });
         }
-      }, 5000);
+      }, 25000);
     </script>
     <div class="main-body">
       <div class="logo">
@@ -66,18 +69,6 @@
         </fieldset>
       </form>
     </div>
-    <div>
-      <p id="a1">Mark1</p>
-      <p id="a2">Mark2</p>
-      <p id="a3">Mark3</p>
-      <p id="a4"></p>
-      <p id="a5"></p>
-      <p id="a6"></p>
-      <p id="a7"></p>
-      <p id="a8"></p>
-      <p id="a9"></p>
-      <p id="a10"></p>
-    </div>
     <script src="{% static 'static/js/three.r119.min.js' %}"></script>
     <script src="{% static 'static/js/vanta.birds.min.js' %}"></script>
     <script>
@@ -99,5 +90,17 @@
       href="js/jquery-1.11.3.min.js"
     ></script>
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+    <div>
+      <p id="a1" class="status">-</p>
+      <p id="a2" class="status">-</p>
+      <p id="a3" class="status">-</p>
+      <p id="a4" class="status">-</p>
+      <p id="a5" class="status">-</p>
+      <p id="a6" class="status">-</p>
+      <p id="a7" class="status">-</p>
+      <p id="a8" class="status">-</p>
+      <p id="a9" class="status">-</p>
+      <p id="a10" class="status">-</p>
+    </div>
   </body>
 </html>

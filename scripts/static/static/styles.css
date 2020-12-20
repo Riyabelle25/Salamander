@@ -2,18 +2,21 @@ body {
   height: 100%;
   min-height: 100vh;
   background-attachment: fixed;
-  background-size: cover;
+  background-size:auto;
   background-repeat: no-repeat;
+  background-color: #3b2d4e;
   overflow-x: hidden;
   opacity: 10;
 }
 
 .logo {
-  height: 200px;
-  width: 200px;
+  height: 150px;
+  width: 150px;
   margin-top: 0.5%;
   margin: 1%;
-  position: relative;
+  position: absolute;
+  top: 0%;
+  left: 10%;
   z-index: -20;
 }
 .tagline-class {
@@ -28,6 +31,11 @@ body {
   left: 10%;
   top: 40%;
   text-shadow: 0.2rem 0.2rem #fac25c;
+}
+#statusGet{
+  position: absolute;
+  left: 3%;
+  top: 66%;
 }
 .status{
   font-family: "Dancing Script", cursive;

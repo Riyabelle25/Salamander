@@ -730,7 +730,7 @@ def home(request):
 
 def getResults(request, target='prakhar__gupta__'):
     userid = removeUnderscore(target)
-    print("628",userid)
+    print("628", userid)
     col_ref = store.collection("recommendations").document(userid)
     data = {}
     doneGuys = []
@@ -739,7 +739,13 @@ def getResults(request, target='prakhar__gupta__'):
         followers = col_ref.get()
         if followers.exists:
             for x in followers.to_dict():
-                doneGuys.append(str(x))
+                print(doneGuys)
+                urlCY =str(followers.to_dict()[x])
+                if((urlCY[:38]) in doneGuys):
+                    print("true")
+                    continue
+                print("fasle")
+                doneGuys.append(urlCY[:38])
                 r = requests.get(
                     url="https://urlpreview.vercel.app/api/v1/preview?url="+str(followers.to_dict()[x]))
                 url_names = r.json()

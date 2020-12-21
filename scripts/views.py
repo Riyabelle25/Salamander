@@ -222,7 +222,7 @@ def finalData(target,opt="amazon",mi=10,ma=50):
         print("HASHTAGS after preprocessed for :",key,"length:",len(hashtags))
         # hashtags = data[key]
         print("177",len(hashtags))
-
+        if len(hashtags)<3: hashtags = ["chocolates","cadbury","archies"]
         for hashtag in hashtags[:10]:
             print(hashtag)            
             if opt == "ebay":
@@ -443,10 +443,6 @@ def Results(username, ps, target,current_url,gf,mi,ma):
         os.remove(hash)
     except Exception as e:
         print(e)
-    try:
-        os.remove(abc)
-    except:
-        pass
     try:
         os.remove(account)
     except:

@@ -72,3 +72,5 @@ def main(hashtags):
     return (list(uniqueSplit(hashtags)))
    
 # nykaaLoves -> nykaa Loves
+# BTS -> BTS
+# 

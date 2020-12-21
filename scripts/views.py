@@ -71,12 +71,12 @@ def ebayAPI(hashtag,key,min=10,max=50):
                  {'name':'HideDuplicateItems',
                  'value': 1},
                  {'name':'MaxPrice',
-                 'value':'50.00'
+                 'value':max
                 #  'paramName':'Currency',
                 #  'paramValue':'INR'
                  },
                  {'name':'MinPrice',
-                 'value':'10.00'}
+                 'value':min}
                 #  'paramName':'Currency',
                 #  'paramValue':'INR'
                 #  }
@@ -90,7 +90,7 @@ def ebayAPI(hashtag,key,min=10,max=50):
         items = soup.find_all('viewitemurl')
         
         if len(items)>=2:
-            for item in items[:2]:
+            for item in items[:3]:
                 print(key,item.contents[0])
                 tmp3.append(item.contents[0])
                 tmp1.append(key)
@@ -142,7 +142,7 @@ def amazonScrape(hashtag,key):
             productfeed = e.extract(r.text)['products']
             counter = 0
             for product in productfeed:
-                if counter > 5: break
+                if counter > 3: break
                 if product['price']==None:print("Price is NONE")
                 elif product['price']!=None: 
                     print(counter,"price NOT NONE")
@@ -191,24 +191,12 @@ def getCollectionData(userid):
     return data
 
 
-'''
-Convert list of hashtags to long string
-'''
-def listToString(s):
-    # initialize an empty string
-    str1 = " "
-    # return string
-    return (str1.join(s))
-
-
 '''Function to manipulate fetched data into desired dataframe.
 Args:
     none.
 Returns:
     list: dataframe of followerid x hashtags, followers, hashtags
 '''
-
-
 
 def finalData(target,opt="amazon",mi=10,ma=50):
     try:
@@ -217,7 +205,7 @@ def finalData(target,opt="amazon",mi=10,ma=50):
         pass
     data = getCollectionData(target)
 
-    # data = {"Nish":["MHA","Darkacademia","Knights","Poetry","Pups"],
+    # dummy data = {"Nish":["MHA","Darkacademia","Knights","Poetry","Pups"],
     # "Sarthak":["Disney","Brooklyn99","Pups","Babies","Poetry"],
     # "Riya":["MHA","Darkacademia","Brookyln99","Cupcakes","HarryPotter"],
     # }
@@ -263,12 +251,20 @@ def finalData(target,opt="amazon",mi=10,ma=50):
         lambda x: np.argwhere(products == x)[0][0])
 
     print(len(followers),len(products))
-    print(df.head(10))
+    print("ORDERED non-Normalised LIST OF PERSONS:",tmp1)
+    print("ORDERED non-Normalised LIST OF ITEMS:",tmp3)
+    print("DATAFRAME:",df.head(20))
+
+    followers=df['followers']
+    products=df['products']
+    print("normalised persons:",followers)
+    print("normalised items:",products)
+
     try:
         updateStatus(target, 'a8', '1')
     except:
         pass
-    return df, followers, products, tmp1
+    return df, followers, products, tmp1,tmp3
 
     # url = "https://www.amazon.in/s?k=Parasite"
     # return HttpResponse(scrape(url)[1])
@@ -284,7 +280,7 @@ def set_occurences(follower, item, occurences):
 
 def co_occurences(target,gf,mi,ma):
 
-    df, followers, products, tmp1 = finalData(target,gf,mi,ma)
+    df, followers, products, tmp1,tmp3 = finalData(target,gf,mi,ma)
     occurences = lil_matrix(
         (followers.shape[0], products.shape[0]), dtype='int8')
     print("164")
@@ -295,7 +291,7 @@ def co_occurences(target,gf,mi,ma):
     print("169")
     cooc.setdiag(0)
     print("171")
-    return cooc, followers, tmp1, products
+    return cooc, followers, tmp1, products ,tmp3
 
 
 def xLogX(x):
@@ -333,7 +329,7 @@ def final_calculations(target,gf,mi,ma):
         updateStatus(target, 'a6', '1')
     except:
         pass
-    co_occurence, followers, tmp1, products = co_occurences(target,gf,mi,ma)
+    co_occurence, followers, tmp1, products , tmp3 = co_occurences(target,gf,mi,ma)
 
     row_sum = np.sum(co_occurence, axis=0).A.flatten()
     column_sum = np.sum(co_occurence, axis=1).A.flatten()
@@ -364,13 +360,12 @@ def final_calculations(target,gf,mi,ma):
         updateStatus(target, 'a9', '1')
     except:
         pass
-    return result_indices, followers, tmp1, products
+    return result_indices, followers, tmp1, products , tmp3
 
 
 '''
 Computing final results.
 '''
-
 def Results(username, ps, target,current_url,gf,mi,ma):
     scrapper(username, ps, target)
     user_id = removeUnderscore(target)
@@ -378,26 +373,63 @@ def Results(username, ps, target,current_url,gf,mi,ma):
         updateStatus(user_id, 'a2', '1')
     except:
         pass
-    results, followers, tmp1, products = final_calculations(user_id,gf,mi,ma)
+    results, followers, tmp1, products, tmp3 = final_calculations(user_id,gf,mi,ma)
 
-# followers = [0,0,0,0,0,0,0,0,1,1,1,1,1,2,2.......]
-# products = [0,1,2,3,4,5,6,3,4,5,6,.................]
-
+# followers = [0,0,0,0,0,0,0,0,1,1,1,1,1,2,2.......], tmp1=[Nish,Riya,Sarthak]
+# products = [0,1,2,3,4,5,6,3,4,5,6,.................], tmp3=[bag,mug,poster......]
+       
+    # for i in range(len(tmp1)):
+    # # we're first iterating over the list of persons. 
+    # # At the end of each iteration we shall set the dict {follower:{0:item0,1:item1..}} into Firestore
+    # # There shall be 2 items stored after each iteration: one is the original item the other is the top ranked recommendation
+    #     dict = {}
+    #     counter+=1
+    #     print(len(tmp1))
+        
+    #     follower = tmp1[i]
+    #     result = results[products[i]]
+    #     dict[str(i)]=  tmp3[i]
+    # # result is a sorted list of items that can be recommended along with the product at that index i.e products[i]
+    #     print(i,follower)
+    #     for j in range(0,1):
+    #         print(j)
+    #         dict[str(j)]=tmp3[result[j]]
+    #     store.collection("recommendations").document(follower).set(dict)
+    counter=0
+    dict = {}
+# Results matrix is n x n: if n is the total number of products suggested for all the persons involved.
     for i in range(len(results)):
-        n= 40
         print(len(results))
+        print(followers.tolist()[i])
+        if counter==10:
+            temp = {val : key for key, val in dict.items()} 
+            res = {val : key for key, val in temp.items()}
+            store.collection("recommendations").document(tmp1[i]).set(res)
+            print("stored!",dict)
+            
+            if followers[i]==followers[i-1]:                         
+    # we have 6 items in our dict now.
+                continue
+            elif followers[i]!=followers[i-1]:
+                print("switch")
+                dict={}
+                counter = 0
+                                       
         follower = tmp1[i]
-        print(i)
+        print(i,counter) # i =1 pe counter=2, print that i jispe counter is again 0
         result = results[i]
         print(follower)
-        dict = {}                                   
-        dict[str(0)] = str(products[i])
-        if len(results)<40: n = len(results)
-        for j in range(1, n):
-            print(j)
-            dict[str(j)] = str(products[result[j]])
+                                           
+        dict[str(counter)] = str(tmp3[i])
+        counter+=1
+        for j in range(1,3):
+            print(j,counter) 
+            dict[str(counter)] = str(tmp3[result[j-1]])
+            counter+=1
+        print(dict) # counter 3 pe first iteration end hua and 2 items dikhega   
+    
 
-        store.collection("recommendations").document(follower).set(dict)
+
     print(current_url)
     current_url += 'getResults/'+user_id
     targetUrl=removeUnderscore(target)
@@ -750,7 +782,7 @@ def getResults(request, target='prakhar__gupta__'):
                 data[followers.to_dict()[x]] = url_names['title']
                 print(url_names['title'])
                 counter += 1
-                if counter == 6:
+                if counter == 12:
                     break
     except google.cloud.exceptions.NotFound:
         print('Missing data')

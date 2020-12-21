@@ -32,10 +32,10 @@
               for (var ids in data) {
                 if (data[ids] == null) continue;
                 if (data[ids] == "1")
-                  document.getElementById(ids.toString()).innerHTML = "Done";
+                  document.getElementById(ids.toString()).innerHTML = "✔ ✔ ✔ ✔";
                 else if (ids.toString() != "a10")
                   document.getElementById(ids.toString()).innerHTML =
-                    "Processing";
+                    "Processing"
                 if (ids.toString() == "a10" && gotoURl == "-") {
                   document.getElementById(ids.toString()).innerHTML = data[ids];
                   gotoURl = data[ids];
@@ -97,17 +97,23 @@
       href="js/jquery-1.11.3.min.js"
     ></script>
     <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
-    <div>
-      <p id="a1" class="status">-</p>
-      <p id="a2" class="status">-</p>
-      <p id="a3" class="status">-</p>
-      <p id="a4" class="status">-</p>
-      <p id="a5" class="status">-</p>
-      <p id="a6" class="status">-</p>
-      <p id="a7" class="status">-</p>
-      <p id="a8" class="status">-</p>
-      <p id="a9" class="status">-</p>
-      <p id="a10" class="status">-</p>
+    <div id="statusGet">
+
+      <label for="username" class="label-text">Progress will be traced below:-</label><br/>
+      <p id="a1" class="status">⏰</p>
+      <p id="a2" class="status"></p>
+      <p id="a3" class="status"></p>
+      <p id="a4" class="status"></p>
+      <p id="a5" class="status"></p>
+      <p id="a6" class="status"></p>
+      <p id="a7" class="status"></p>
+      <p id="a8" class="status"></p>
+      <p id="a9" class="status"></p>
+      <p id="a10" class="status"></p>
+      <br/><br/><br/><br/><br/>
+      <br/><br/><br/><br/><br/>
+      <br/><br/><br/><br/><br/>
+      <br/><br/><br/><br/><br/>
     </div>
   </body>
 </html>
